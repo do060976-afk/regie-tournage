@@ -79,33 +79,35 @@ h1{font-size:1.2rem;font-weight:800;margin:0;display:flex;align-items:center;gap
 .bar{height:10px;background:rgba(255,255,255,.14);border-radius:5px;margin-top:14px;overflow:hidden}
 #bar{height:100%;background:var(--rec);width:0;transition:width .4s ease}
 
-/* --- NAVIGATION (CORRIGÉE) --- */
+/* --- NAVIGATION --- */
 nav{
   display:flex;
-  flex-wrap:wrap; /* Permet aux onglets de passer à la ligne sur desktop */
+  flex-wrap:wrap; 
   row-gap:6px;
   margin:16px 0;
   border-bottom:2px solid var(--line);
   width: 100%;
 }
 nav button{
+  display:flex;
+  align-items:center;
+  gap:6px;
   flex:0 0 auto;
   border:0;
   background:none;
   color:var(--muted);
   font:inherit;
   font-weight:600;
-  font-size:0.95rem; /* Légèrement plus petit */
-  padding:8px 12px; /* Moins large */
+  font-size:0.95rem;
+  padding:8px 12px;
   cursor:pointer;
   border-bottom:3px solid transparent;
   margin-bottom:-2px;
   transition:color .15s;
 }
-nav button[aria-selected=true]{
-  color:var(--ink);
-  border-color:var(--rec);
-}
+nav button svg{ width:16px; height:16px; opacity:0.7; transition:opacity .15s; }
+nav button[aria-selected=true]{ color:var(--ink); border-color:var(--rec); }
+nav button[aria-selected=true] svg{ opacity:1; color:var(--rec); }
 
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,label:focus-visible{outline:3px solid var(--tape);outline-offset:2px}
 
@@ -159,11 +161,16 @@ input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--rec)}
   background:var(--btn-bg);
   color:var(--btn-fg);
   cursor:pointer;text-align:center;text-decoration:none;
-  display: inline-block; box-sizing: border-box;
+  display: inline-flex; align-items:center; justify-content:center; gap:6px; box-sizing: border-box;
   letter-spacing:-.005em;
 }
 .btn.ghost{background:none;color:var(--muted);border:1px solid var(--line);padding:7px 11px;font-weight:600}
 .btn.ghost:hover{color:var(--ink)}
+.btn svg{width:16px;height:16px}
+
+.delBtn { padding: 6px; color: var(--muted); border: 1px solid transparent; }
+.delBtn:hover { color: var(--rec); background: color-mix(in srgb, var(--rec) 10%, transparent); }
+.delBtn svg { width: 18px; height: 18px; }
 
 .phase{
   display:grid;grid-template-columns:1fr 78px;gap:4px 10px;
@@ -210,7 +217,7 @@ a.map-link:hover{color:var(--ink)}
 .tools-menu summary { list-style: none; cursor: pointer; user-select: none; }
 .tools-menu summary::-webkit-details-marker { display: none; }
 .tools-content { position: absolute; right: 0; top: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,0.15); min-width: 170px; max-width: 90vw; margin-top: 5px; box-sizing: border-box;}
-.tools-content button, .tools-content label { width: 100%; text-align: left; margin: 0; padding: 10px; box-sizing: border-box; white-space: normal;}
+.tools-content button, .tools-content label { width: 100%; text-align: left; margin: 0; padding: 10px; box-sizing: border-box; white-space: normal; justify-content: flex-start;}
 .tools-content .btn.ghost { border: 0; background: var(--bg); }
 
 /* --- STYLES MODE LECTURE SEULE --- */
@@ -232,11 +239,10 @@ body.readonly input[type="checkbox"] { display: none; }
   .tools-menu { width: 100%; }
   .tools-menu summary { width: 100%; display: block; text-align: center; margin: 0; padding: 12px; }
   .tools-content { position: absolute; left: 0; right: 0; width: 100%; min-width: 0; box-sizing: border-box; }
-  .tools-content button, .tools-content label { text-align: center; padding: 12px; font-size: 1rem; }
+  .tools-content button, .tools-content label { text-align: center; justify-content: center; padding: 12px; font-size: 1rem; }
   
   .hero { padding: 18px; margin: 12px 0 8px; }
   
-  /* Nav mobile : repasse en scroll horizontal avec effet de fondu */
   nav { 
     margin: 12px 0; 
     flex-wrap: nowrap; 
@@ -259,8 +265,8 @@ body.readonly input[type="checkbox"] { display: none; }
   .add input { width: 100%; margin-bottom: 4px; flex: none; }
   .add .btn { width: 100%; padding: 12px; }
   input, select, textarea { font-size: 16px; padding: 10px; }
-  .btn.ghost { padding: 12px; text-align: center; }
-  .delBtn { width: 100%; padding: 12px; margin-top: 4px; border: 1px dashed var(--line); color: var(--rec); }
+  .btn.ghost { padding: 12px; text-align: center; justify-content: center;}
+  .delBtn { width: 100%; padding: 12px; margin-top: 4px; border: 1px dashed var(--line); color: var(--rec); justify-content:center;}
   .st { width: 100%; text-align: center; padding: 10px; }
   .grid { grid-template-columns: 1fr; }
   .sheet table { font-size: 0.85rem; }
@@ -317,17 +323,19 @@ document.head.appendChild(manifestLink);
     <span class="muted" id="sync"></span>
     <button class="btn ghost" data-act="copy">Lien équipe</button>
     <button class="btn ghost" data-act="copy_ro">Lien lecture</button>
+    <button class="btn ghost" id="theme" title="Changer de thème" aria-label="Changer de thème" style="padding:7px 10px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
 
     <details class="tools-menu">
       <summary class="btn ghost">Outils ⚙️</summary>
       <div class="tools-content">
         <button class="btn ghost" data-act="leave" id="leave" hidden>Changer d’équipe</button>
-        <button class="btn ghost" data-act="del_room" id="del_room" hidden style="color:var(--rec);">Supprimer</button>
+        <button class="btn ghost" data-act="del_room" id="del_room" hidden style="color:var(--rec);">Supprimer l'équipe</button>
         <button class="btn ghost" data-act="export">Sauvegarder</button>
-        <label for="fileIn" class="btn ghost">Fichier</label>
-        <button class="btn ghost" data-act="paste">Coller</button>
+        <label for="fileIn" class="btn ghost">Charger un fichier</label>
+        <button class="btn ghost" data-act="paste">Coller une sauvegarde</button>
         <button class="btn ghost" data-act="alerts" id="alertBtn">Alertes</button>
-        <button class="btn ghost" id="theme">Thème</button>
       </div>
     </details>
   </div>
@@ -389,6 +397,23 @@ tasks:obj(['Charger les batteries et vider les cartes mémoire','Prévoir repas 
 gear:obj(['Caméra et objectifs','Micro et perche','Trépied','Lumières','Cartes mémoire','Batteries chargées','Disque SSD','Câbles et rallonges','Ordinateur de montage','Casque audio','Clap'],t=>({t,who:'',k:0})),
 timeline:{} });
 let S={},ready=false,R=null,room='',pending=false,tab='chrono',newMode='48h',curDay='';
+
+/* --- SVG ICONS --- */
+const ICONS = {
+  chrono: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  timeline: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  equipe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  taches: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+  scenes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>',
+  matos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
+  sommeil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+  budget: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+  permis: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+  rapport: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="14" x2="15" y2="14"/><line x1="9" y1="18" x2="15" y2="18"/></svg>',
+  feuille: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>'
+};
+
 const TABS=[['chrono','Chrono'],['timeline','Journée'],['equipe','Équipe'],['taches','Tâches'],['scenes','Scènes'],['matos','Matériel'],['sommeil','Sommeil'],['budget','Budget'],['permis','Autorisations'],['rapport','Rapport'],['feuille','Feuille de service']];
 const ST=['À faire','En cours','Fait'],SS=['À tourner','En cours','Tournée'];
 const tabs=()=>S.mode==='classic'?[['chrono','Planning'],['timeline','Journée'],['equipe','Équipe'],['taches','Tâches'],['scenes','Scènes'],['matos','Matériel'],['budget','Budget'],['permis','Autorisations'],['rapport','Rapport'],['feuille','Feuille de service']]:TABS;
@@ -563,13 +588,13 @@ function tick(){
 }
 
 const addRow=(k,ph1,ph2,ph3,t2,t3)=>`<div class="add"><input id="a1" placeholder="${ph1}">${ph2?`<input id="a2" ${t2||''} placeholder="${ph2}" list="who">`:''}${ph3?`<input id="a3" ${t3||''} placeholder="${ph3}">`:''}<button class="btn" data-add="${k}">Ajouter</button></div>`;
-const delBtn=(k,id)=>`<button class="btn ghost delBtn" data-del="${k}" data-id="${id}" aria-label="Supprimer">Supprimer ×</button>`;
+const delBtn=(k,id)=>`<button class="btn ghost delBtn" data-del="${k}" data-id="${id}" aria-label="Supprimer" title="Supprimer">${ICONS.trash}</button>`;
 const edit=(k,id,f,v,ph)=>`<input class="who" data-edit="${k}" data-id="${id}" data-f="${f}" value="${esc(v)}" placeholder="${ph}" list="who">`;
 
 function view(){
   pending=false;
   if(!tabs().some(x=>x[0]===tab))tab='chrono';
-  $('#tabs').innerHTML=tabs().map(([k,l])=>`<button role="tab" aria-selected="${k===tab}" data-tab="${k}">${l}</button>`).join('');
+  $('#tabs').innerHTML=tabs().map(([k,l])=>`<button role="tab" aria-selected="${k===tab}" data-tab="${k}">${ICONS[k]||''} ${l}</button>`).join('');
   const m=$('#main');
 
   if(SYNC&&!room){
