@@ -73,7 +73,7 @@ section.card{border:0;padding:0}.wrap{padding:0}}
 const manifest = {
   name: "Régie de tournage",
   short_name: "Régie",
-  start_url: location.pathname, // <--- CORRECTION ICI : On ne fige plus le lien du projet
+  start_url: location.pathname, 
   display: "standalone",
   background_color: "#e8edf1",
   theme_color: "#14213d",
@@ -116,6 +116,11 @@ const FIREBASE_CONFIG={
   appId: "1:882883209097:web:d27e96e6eadfa3350b6358"
 };
 /* ====================================== */
+
+/* ====== CODE ADMINISTRATEUR ====== */
+/* Changez "cinema" par le mot de passe de votre choix */
+const ADMIN_CODE = "cinema"; 
+/* ================================= */
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -202,7 +207,7 @@ function view(){
       <h2>Bienvenue sur votre Régie</h2>
       <p class="muted" style="margin-bottom:20px;">Pour rejoindre une équipe existante, il vous suffit de cliquer sur le lien que l'on vous a partagé.</p>
       <h3>Créer un nouveau projet</h3>
-      <p class="muted">Choisissez le type de projet ci-dessous. L'application générera automatiquement un code et un lien pour inviter votre équipe.</p>
+      <p class="muted">La création d'une équipe est réservée à l'administrateur (un code vous sera demandé).</p>
       <div class="add" style="margin-top:15px;">
         <select id="rm" aria-label="Type de projet">
           <option value="48h">Concours 48 h</option>
@@ -313,6 +318,14 @@ document.addEventListener('click',e=>{
     return;
   }
   else if(d.act==='new'){
+    // --- SÉCURITÉ ADMINISTRATEUR ---
+    const code = prompt("Code administrateur requis pour créer une nouvelle équipe :");
+    if (code === null) return; // L'utilisateur a annulé
+    if (code !== ADMIN_CODE) {
+      alert("Code incorrect. La création d'équipe est refusée.");
+      return;
+    }
+    
     let c=Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>'abcdefghjkmnpqrstuvwxyz23456789'[b%31]).join('');
     newMode=($('#rm')||{}).value||'48h';
     room=c;history.replaceState(null,'','#'+room);try{localStorage.setItem(RK,room)}catch(x){}connect();
@@ -377,7 +390,7 @@ $('#fileIn').addEventListener('change', function(e) {
 function connect(){
   $('#leave').hidden=false;
   $('#del_room').hidden=false;
-  try{localStorage.setItem(RK, room)}catch(x){} // <--- Mémorisation de l'équipe rejointe
+  try{localStorage.setItem(RK, room)}catch(x){} // Mémorisation de l'équipe rejointe
   if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
   const db=firebase.database();R=db.ref('rooms/'+room);
   db.ref('.info/connected').on('value',s=>{$('#sync').textContent=s.val()?'● Synchronisé · équipe '+room:'○ Connexion…'});
