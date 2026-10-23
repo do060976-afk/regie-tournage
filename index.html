@@ -8,56 +8,176 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
-:root{--bg:#e8edf1;--surface:#f7f9fa;--ink:#14213d;--muted:#5b6678;--line:#c4ccd6;--rec:#c8202f;--tape:#f2c14e;--ok:#2d7a4f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101826;--surface:#182234;--ink:#e8edf5;--muted:#9aa6ba;--line:#2e3b52;--rec:#ff5a67;--ok:#5ec48a;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#101826;--surface:#182234;--ink:#e8edf5;--muted:#9aa6ba;--line:#2e3b52;--rec:#ff5a67;--ok:#5ec48a;color-scheme:dark}
+:root{
+  /* --- Light : papier de production --- */
+  --bg:#ece6dc;
+  --surface:#f5efe4;
+  --ink:#1a1a1a;
+  --muted:#6b6259;
+  --line:#d8cfc1;
+  --rec:#c92b1c;
+  --tape:#e8b931;
+  --ok:#3a7d44;
+  --hero-bg:#1a1a1a;
+  --hero-fg:#f5efe4;
+  --btn-bg:#1a1a1a;
+  --btn-fg:#f5efe4;
+  --card-shadow:0 1px 2px rgba(60,50,40,0.06),0 2px 8px rgba(60,50,40,0.05);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+:root[data-theme="dark"]{
+  /* --- Dark : nuit de tournage --- */
+  --bg:#14110e;
+  --surface:#1f1b17;
+  --ink:#f0e9dc;
+  --muted:#a89b88;
+  --line:#3a322a;
+  --rec:#ff5544;
+  --tape:#f4c94a;
+  --ok:#8acd8a;
+  --hero-bg:#0a0805;
+  --hero-fg:#f0e9dc;
+  --btn-bg:#2e2620;
+  --btn-fg:#f0e9dc;
+  --card-shadow:none;
+  color-scheme:dark;
+}
 *{box-sizing:border-box}
 html, body { max-width: 100%; overflow-x: hidden; }
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5; -webkit-tap-highlight-color: transparent; word-wrap: break-word; overflow-wrap: break-word;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;
+  line-height:1.55;
+  -webkit-tap-highlight-color: transparent;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+::selection{background:var(--tape);color:#1a1a1a}
+
 .wrap{max-width:860px;margin:0 auto;padding:16px; width: 100%;}
 header.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap; margin-bottom: 10px; width: 100%;}
-h1{font-size:1.1rem;font-weight:800;margin:0;display:flex;align-items:center;gap:8px}
-.dot{width:12px;height:12px;border-radius:50%;background:var(--rec);animation:blink 1.4s infinite}
+h1{font-size:1.2rem;font-weight:800;margin:0;display:flex;align-items:center;gap:8px;letter-spacing:-.015em}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--rec);animation:blink 1.4s infinite;box-shadow:0 0 0 3px color-mix(in srgb,var(--rec) 18%,transparent)}
 @keyframes blink{50%{opacity:.25}}
 @media (prefers-reduced-motion:reduce){.dot{animation:none}}
-.hero{margin:14px 0 8px;padding:20px;background:var(--ink);color:var(--bg);border-radius:6px;border-bottom:8px solid var(--tape); width: 100%; box-sizing: border-box;}
-.hero small{opacity:.8}
-#cd{font-size:clamp(2.4rem,11vw,4.6rem);font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05}
-.bar{height:10px;background:rgba(128,128,128,.35);border-radius:5px;margin-top:12px;overflow:hidden}
-#bar{height:100%;background:var(--rec);width:0}
-nav{display:flex;gap:4px;overflow-x:auto;margin:14px 0;border-bottom:2px solid var(--line); -webkit-overflow-scrolling: touch; scrollbar-width: none; width: 100%;}
+
+.hero{
+  margin:16px 0 10px;
+  padding:24px 22px;
+  background:var(--hero-bg);
+  color:var(--hero-fg);
+  border-radius:8px;
+  border-bottom:8px solid var(--tape);
+  width: 100%; box-sizing: border-box;
+}
+.hero small{opacity:.82}
+#cd{font-size:clamp(2.8rem,13vw,5.2rem);font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.02}
+.bar{height:10px;background:rgba(255,255,255,.14);border-radius:5px;margin-top:14px;overflow:hidden}
+#bar{height:100%;background:var(--rec);width:0;transition:width .4s ease}
+
+nav{display:flex;gap:4px;overflow-x:auto;margin:16px 0;border-bottom:2px solid var(--line); -webkit-overflow-scrolling: touch; scrollbar-width: none; width: 100%;}
 nav::-webkit-scrollbar { display: none; }
-nav button{flex:0 0 auto;border:0;background:none;color:var(--muted);font:inherit;font-weight:600;padding:10px 14px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+nav button{flex:0 0 auto;border:0;background:none;color:var(--muted);font:inherit;font-weight:600;padding:10px 14px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .15s}
 nav button[aria-selected=true]{color:var(--ink);border-color:var(--rec)}
-button:focus-visible,input:focus-visible,select:focus-visible,label:focus-visible{outline:3px solid var(--tape);outline-offset:1px}
-section.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:14px; width: 100%; box-sizing: border-box; overflow: hidden;}
-h2{font-size:1.05rem;margin:0 0 10px}
-h3{font-size:.95rem;margin:14px 0 4px}
+
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,label:focus-visible{outline:3px solid var(--tape);outline-offset:2px}
+
+section.card{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:18px;
+  margin-bottom:16px;
+  box-shadow:var(--card-shadow);
+  width: 100%; box-sizing: border-box; overflow: hidden;
+}
+h2{
+  font-size:1.15rem;
+  font-weight:800;
+  margin:0 0 12px;
+  padding-left:12px;
+  border-left:3px solid var(--tape);
+  letter-spacing:-.015em;
+  line-height:1.25;
+}
+h3{
+  font-size:1rem;
+  font-weight:700;
+  margin:18px 0 6px;
+  letter-spacing:-.005em;
+}
 label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:3px}
-input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px;width:100%;min-width:0; box-sizing: border-box; max-width: 100%;}
-input[type=checkbox]{width:22px;height:22px;flex:none}
+
+input,select,textarea{
+  font:inherit;color:var(--ink);
+  background:var(--bg);
+  border:1px solid var(--line);
+  border-radius:5px;
+  padding:8px 10px;
+  width:100%;min-width:0;
+  box-sizing: border-box; max-width: 100%;
+}
+input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--rec)}
+
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
-.row{display:flex;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap; width: 100%;}
+.row{display:flex;gap:8px;align-items:center;padding:11px 0;border-top:1px solid var(--line);flex-wrap:wrap; width: 100%;}
 .row.first{border-top:0}
 .grow{flex:1 1 140px;min-width:0}
 .who{flex:0 1 150px}.dt{flex:0 1 150px}.num{flex:0 0 110px}.tm{width:120px}
-.btn{font:inherit;font-weight:600;border:0;border-radius:4px;padding:8px 14px;background:var(--ink);color:var(--bg);cursor:pointer;text-align:center;text-decoration:none; display: inline-block; box-sizing: border-box;}
-.btn.ghost{background:none;color:var(--muted);border:1px solid var(--line);padding:6px 10px}
-.phase{display:grid;grid-template-columns:1fr 78px;gap:4px 10px;padding:10px 12px;border-left:6px solid var(--line);margin-bottom:6px;background:var(--bg);border-radius:0 4px 4px 0; width: 100%;}
-.phase.now{border-color:var(--rec);background:color-mix(in srgb,var(--tape) 28%,var(--bg))}
+
+.btn{
+  font:inherit;font-weight:700;
+  border:0;border-radius:5px;
+  padding:9px 16px;
+  background:var(--btn-bg);
+  color:var(--btn-fg);
+  cursor:pointer;text-align:center;text-decoration:none;
+  display: inline-block; box-sizing: border-box;
+  letter-spacing:-.005em;
+}
+.btn.ghost{background:none;color:var(--muted);border:1px solid var(--line);padding:7px 11px;font-weight:600}
+.btn.ghost:hover{color:var(--ink)}
+
+.phase{
+  display:grid;grid-template-columns:1fr 78px;gap:4px 10px;
+  padding:12px 14px;
+  border-left:6px solid var(--line);
+  margin-bottom:6px;
+  background:var(--bg);
+  border-radius:0 6px 6px 0;
+  width: 100%;
+}
+.phase.now{border-color:var(--rec);background:color-mix(in srgb,var(--tape) 30%,var(--bg))}
 .phase.past{opacity:.55;border-color:var(--ok)}
 .phase small{color:var(--muted)}
-.st{font-weight:600;border-radius:12px;padding:4px 12px;border:2px solid var(--line);background:none;color:var(--ink);cursor:pointer;font-family:inherit; display: inline-block;}
-.st.s1{border-color:var(--tape);background:var(--tape);color:#14213d}.st.s2{border-color:var(--ok);background:var(--ok);color:#fff}
+
+.st{
+  font-weight:700;font-size:.9rem;
+  border-radius:14px;padding:5px 14px;
+  border:2px solid var(--line);
+  background:none;color:var(--ink);
+  cursor:pointer;font-family:inherit;
+  display: inline-block;letter-spacing:-.005em;
+}
+.st.s1{border-color:var(--tape);background:var(--tape);color:#1a1a1a}
+.st.s2{border-color:var(--ok);background:var(--ok);color:#1a1a1a}
+
 .done{text-decoration:line-through;color:var(--muted)}
-.warn{color:var(--rec);font-weight:600}
+.warn{color:var(--rec);font-weight:700}
 .muted{color:var(--muted);font-size:.9rem}
+
 .add{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px; width: 100%;}
 .add input{flex:1 1 120px}
-.banner{background:var(--tape);color:#14213d;padding:10px 14px;border-radius:6px;margin-top:12px;font-weight:600; word-break: break-word;}
+
+.banner{background:var(--tape);color:#1a1a1a;padding:10px 14px;border-radius:6px;margin-top:12px;font-weight:700; word-break: break-word;}
+
 .sheet { width: 100%; overflow-x: auto; }
 .sheet table{width:100%;border-collapse:collapse; min-width: 500px;}
-.sheet td,.sheet th{text-align:left;padding:4px 8px 4px 0;border-bottom:1px solid var(--line);vertical-align:top; word-break: break-word;}
+.sheet td,.sheet th{text-align:left;padding:6px 8px 6px 0;border-bottom:1px solid var(--line);vertical-align:top; word-break: break-word;}
 a.map-link{color:var(--muted);text-decoration:underline;text-underline-offset:2px; word-break: break-all;}
 a.map-link:hover{color:var(--ink)}
 
@@ -66,7 +186,7 @@ a.map-link:hover{color:var(--ink)}
 .tools-menu { position: relative; display: inline-block; max-width: 100%;}
 .tools-menu summary { list-style: none; cursor: pointer; user-select: none; }
 .tools-menu summary::-webkit-details-marker { display: none; }
-.tools-content { position: absolute; right: 0; top: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 170px; max-width: 90vw; margin-top: 5px; box-sizing: border-box;}
+.tools-content { position: absolute; right: 0; top: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,0.15); min-width: 170px; max-width: 90vw; margin-top: 5px; box-sizing: border-box;}
 .tools-content button, .tools-content label { width: 100%; text-align: left; margin: 0; padding: 10px; box-sizing: border-box; white-space: normal;}
 .tools-content .btn.ghost { border: 0; background: var(--bg); }
 
@@ -80,74 +200,71 @@ body.readonly input[type="checkbox"] { display: none; }
 /* --- AMÉLIORATIONS SPÉCIFIQUES MOBILE --- */
 @media (max-width: 600px) {
   .wrap { padding: 10px; }
-  
-  /* En-tête et boutons sur 2 lignes */
   header.top { flex-direction: column; align-items: stretch; }
   h1 { justify-content: center; margin-bottom: 10px; }
   .header-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
   .header-actions .muted { grid-column: 1 / -1; text-align: center; margin-bottom: 5px; }
   .header-actions > button { width: 100%; margin: 0; padding: 12px; }
   .header-actions > details { grid-column: 1 / -1; width: 100%; }
-  
   .tools-menu { width: 100%; }
   .tools-menu summary { width: 100%; display: block; text-align: center; margin: 0; padding: 12px; }
-  .tools-content { 
-    position: absolute; 
-    left: 0; 
-    right: 0; 
-    width: 100%; 
-    min-width: 0; 
-    box-sizing: border-box;
-  }
-  .tools-content button, .tools-content label { 
-    text-align: center;
-    padding: 12px;
-    font-size: 1rem;
-  }
-  
-  .hero { padding: 16px; margin: 10px 0 8px; }
-  nav { margin: 10px 0; }
+  .tools-content { position: absolute; left: 0; right: 0; width: 100%; min-width: 0; box-sizing: border-box; }
+  .tools-content button, .tools-content label { text-align: center; padding: 12px; font-size: 1rem; }
+  .hero { padding: 18px; margin: 12px 0 8px; }
+  nav { margin: 12px 0; }
   nav button { padding: 12px 16px; font-size: 0.95rem; }
-  section.card { padding: 12px; }
-  
-  /* Les lignes passent en mode vertical */
+  section.card { padding: 14px; }
+  h2 { padding-left: 10px; }
   .row { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 0; }
   .row > div, .row > input, .row > select { width: 100%; max-width: 100%; }
   .who, .dt, .num, .tm { width: 100%; flex: 1 1 auto; }
-  
-  /* L'ajout de données prend toute la largeur */
   .add { flex-direction: column; }
   .add input { width: 100%; margin-bottom: 4px; flex: none; }
   .add .btn { width: 100%; padding: 12px; }
-  
-  /* Champs de saisie plus grands */
   input, select, textarea { font-size: 16px; padding: 10px; }
-  
-  /* Boutons tactiles */
   .btn.ghost { padding: 12px; text-align: center; }
   .delBtn { width: 100%; padding: 12px; margin-top: 4px; border: 1px dashed var(--line); color: var(--rec); }
   .st { width: 100%; text-align: center; padding: 10px; }
   .grid { grid-template-columns: 1fr; }
-  
   .sheet table { font-size: 0.85rem; }
 }
-textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px;width:100%;min-height:90px}
-.toast{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:14px;border-radius:6px;font-weight:600;z-index:10000;border-left:8px solid var(--tape)}
+
+textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:10px;width:100%;min-height:90px}
+
+.toast{
+  position:fixed;left:12px;right:12px;
+  bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  background:var(--hero-bg);color:var(--hero-fg);
+  padding:14px;border-radius:8px;font-weight:600;
+  z-index:10000;border-left:8px solid var(--tape);
+  box-shadow:0 8px 24px rgba(0,0,0,0.25);
+}
+
 @media print{
-:root,:root:not([data-theme="light"]),:root[data-theme="dark"]{--bg:#fff;--surface:#fff;--ink:#000;--muted:#333;--line:#999;color-scheme:light}
-header.top,.hero,nav,.noprint,.banner{display:none!important}
-section.card{border:0;padding:0}.wrap{padding:0}}
+  :root,:root[data-theme="dark"]{
+    --bg:#fff;--surface:#fff;--ink:#000;--muted:#333;--line:#999;
+    --tape:#e8e0d0;--rec:#000;--ok:#555;
+    --hero-bg:#fff;--hero-fg:#000;
+    --btn-bg:#000;--btn-fg:#fff;
+    --card-shadow:none;
+    color-scheme:light
+  }
+  header.top,.hero,nav,.noprint,.banner{display:none!important}
+  section.card{border:0;padding:0;box-shadow:none}
+  h2{border-left:0;padding-left:0}
+  .wrap{padding:0}
+}
 </style>
 <script>
 // --- PWA MANIFEST INJECTION ---
 const manifest = {
   name: "Régie de tournage",
   short_name: "Régie",
-  start_url: location.pathname, 
+  start_url: location.pathname,
   display: "standalone",
-  background_color: "#e8edf1",
-  theme_color: "#14213d",
-  icons: [{ src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzE0MjEzZCIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjMwIiBmaWxsPSIjYzgyMDJmIi8+PC9zdmc+", sizes: "192x192", type: "image/svg+xml" }]
+  background_color: "#ece6dc",
+  theme_color: "#1a1a1a",
+  icons: [{ src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzFhMWExYSIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjMwIiBmaWxsPSIjYzkyYjFjIi8+PC9zdmc+", sizes: "192x192", type: "image/svg+xml" }]
 };
 const manifestLink = document.createElement('link');
 manifestLink.rel = 'manifest';
@@ -160,14 +277,14 @@ document.head.appendChild(manifestLink);
 <header class="top">
   <h1><span class="dot"></span>Régie de tournage</h1>
   <div class="header-actions">
-    <span class="muted" id="sync"></span> 
-    <button class="btn ghost" data-act="copy">Lien équipe</button> 
+    <span class="muted" id="sync"></span>
+    <button class="btn ghost" data-act="copy">Lien équipe</button>
     <button class="btn ghost" data-act="copy_ro">Lien lecture</button>
-    
+
     <details class="tools-menu">
       <summary class="btn ghost">Outils ⚙️</summary>
       <div class="tools-content">
-        <button class="btn ghost" data-act="leave" id="leave" hidden>Changer d’équipe</button> 
+        <button class="btn ghost" data-act="leave" id="leave" hidden>Changer d’équipe</button>
         <button class="btn ghost" data-act="del_room" id="del_room" hidden style="color:var(--rec);">Supprimer</button>
         <button class="btn ghost" data-act="export">Sauvegarder</button>
         <label for="fileIn" class="btn ghost">Fichier</label>
@@ -212,13 +329,13 @@ const FIREBASE_CONFIG={
 /* ====================================== */
 
 /* ====== CODE ADMINISTRATEUR ====== */
-const ADMIN_CODE = "cinema"; 
+const ADMIN_CODE = "cinema";
 /* ================================= */
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const SYNC=typeof firebase!=='undefined'&&!/COLLEZ/.test(FIREBASE_CONFIG.apiKey)&&!!FIREBASE_CONFIG.databaseURL;
-const isRO = /readonly/.test(location.search+location.hash); 
+const isRO = /readonly/.test(location.search+location.hash);
 if(isRO) document.body.classList.add('readonly');
 
 const LK='regie48h_local',RK='regie48h_room';
@@ -301,13 +418,9 @@ function setIn(o,p,v){for(let i=0;i<p.length-1;i++)o=o[p[i]]=o[p[i]]||{};const k
 
 /* ============================================================
    FIX 1 + FIX 3 : écriture locale optimiste + debounce Firebase
-   - put() met TOUJOURS à jour S + localStorage immédiatement.
-   - L'écriture Firebase est retardée (sauf clic = immédiat).
-   - Les écritures en attente sont sauvées dans localStorage
-     et rejouées au chargement, pour ne rien perdre au reload.
    ============================================================ */
 const DEBOUNCE_MS = 350;
-const pendingWrites = {}; // path -> {v, timer}
+const pendingWrites = {};
 
 function savePending(){
   if(!SYNC || !room) return;
@@ -360,11 +473,9 @@ function flushPending(){
 
 function put(path, v, immediate){
   if(isRO) return;
-  // 1. Mise à jour locale optimiste (toujours, dans les deux modes)
   setIn(S, path.split('/'), v);
   const cacheKey = SYNC ? 'regie_cache_'+room : LK;
   try{ localStorage.setItem(cacheKey, JSON.stringify(S)) }catch(e){}
-  // 2. Écriture Firebase
   if(!SYNC || !R) return;
   if(pendingWrites[path]){
     clearTimeout(pendingWrites[path].timer);
@@ -423,7 +534,7 @@ function view(){
   if(!tabs().some(x=>x[0]===tab))tab='chrono';
   $('#tabs').innerHTML=tabs().map(([k,l])=>`<button role="tab" aria-selected="${k===tab}" data-tab="${k}">${l}</button>`).join('');
   const m=$('#main');
-  
+
   if(SYNC&&!room){
     $('#tabs').innerHTML='';
     m.innerHTML=`<section class="card">
@@ -444,7 +555,7 @@ function view(){
   if(!ready){m.innerHTML='<p class="muted">Connexion à l’équipe…</p>';return}
   const names=L('team').map(p=>`<option value="${esc(p.n)}">`).join('');
   const dl=`<datalist id="who">${names}</datalist>`;
-  
+
   if(tab==='chrono'&&S.mode==='classic'){
     const td=todayS(),c=S.c||{};
     m.innerHTML=modeSel()+`<section class="card"><h2>Projet</h2><div class="grid">${[['titre','Titre'],['genre','Genre'],['logline','Pitch en une phrase']].map(([k,l])=>`<div><label for="c-${k}">${l}</label><input id="c-${k}" data-c="${k}" value="${esc(c[k])}"></div>`).join('')}</div></section>
@@ -538,7 +649,7 @@ document.addEventListener('click',e=>{
   else if(d.act==='leave'){try{localStorage.removeItem(RK)}catch(x){}history.replaceState(null,'',location.pathname);location.reload();return}
   else if(d.act==='del_room'){
     const code = prompt("🔒 Code administrateur requis pour supprimer cette équipe :");
-    if (code === null) return; 
+    if (code === null) return;
     if (code !== ADMIN_CODE) {
       alert("Code incorrect. Suppression refusée.");
       return;
@@ -570,7 +681,7 @@ document.addEventListener('click',e=>{
   }
   else if(d.act==='new'){
     const code = prompt("Code administrateur requis pour créer une nouvelle équipe :");
-    if (code === null) return; 
+    if (code === null) return;
     if (code !== ADMIN_CODE) {
       alert("Code incorrect. La création d'équipe est refusée.");
       return;
@@ -596,7 +707,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('input',e=>{
   const t=e.target;
-  // Toutes ces écritures sont debouncées : ce sont des frappes clavier.
+  // Frappes clavier → debounce Firebase, mise à jour locale immédiate
   if(t.dataset.c)put('c/'+t.dataset.c,t.value);
   else if(t.dataset.ph!==undefined){put('phases/'+t.dataset.ph+'/h',+t.value||0);tick()}
   else if(t.dataset.b!==undefined){put('bud',+t.value||0);updBud()}
@@ -604,7 +715,7 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{
   const t=e.target,d=t.dataset;
-  // Les "change" ne firent qu'une fois par interaction : on peut écrire immédiatement.
+  // Les change ne firent qu'une fois par interaction → écriture immédiate
   if(t.id==='md'){put('mode',t.value,true);if(t.value==='classic'&&!S.cph)put('cph',DEF('classic').cph,true);view()}
   else if(t.id==='vil'){loadWx()}
   else if(t.id==='fd'){curDay=t.value;view()}
@@ -613,11 +724,16 @@ document.addEventListener('change',e=>{
   else if(d.edit&&d.num===undefined)put(d.edit+'/'+d.id+'/'+d.f,t.value.trim(),true);
 });
 document.addEventListener('focusout',()=>setTimeout(()=>{if(pending&&!typing())view()},400));
-$('#theme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark'};
+
+// Bouton Thème : simple bascule clair ↔ sombre
+$('#theme').onclick=()=>{
+  const r=document.documentElement;
+  r.dataset.theme = (r.dataset.theme==='dark') ? 'light' : 'dark';
+};
+
 window.addEventListener('hashchange',()=>location.reload());
 
-// Envoie immédiatement les écritures en attente si l'utilisateur
-// met l'onglet en arrière-plan, change de page ou ferme l'app.
+// Envoie immédiatement les écritures en attente si l'app passe en arrière-plan
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushPending()});
 window.addEventListener('pagehide',flushPending);
 window.addEventListener('beforeunload',flushPending);
@@ -642,13 +758,13 @@ function processImport(parsed) {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     const db = firebase.database();
     const ref = db.ref('rooms/' + targetRoom);
-    
+
     ref.set(targetData).then(() => {
       alert("Restauration réussie ! Redirection vers l'équipe " + targetRoom);
       if (targetRoom !== room) {
         localStorage.setItem(RK, targetRoom);
         location.hash = '#' + targetRoom;
-        location.search = ''; 
+        location.search = '';
         location.reload();
       } else {
         view();
@@ -685,7 +801,7 @@ $('#fileIn').addEventListener('change', function(e) {
     } catch (err) {
       alert("Erreur : le fichier sélectionné n'est pas un JSON valide.");
     }
-    e.target.value = ''; 
+    e.target.value = '';
   };
   reader.readAsText(file);
 });
@@ -693,18 +809,18 @@ $('#fileIn').addEventListener('change', function(e) {
 function connect(){
   $('#leave').hidden=false;
   $('#del_room').hidden=false;
-  try{localStorage.setItem(RK, room)}catch(x){} 
+  try{localStorage.setItem(RK, room)}catch(x){}
   if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
   const db=firebase.database();R=db.ref('rooms/'+room);
   db.ref('.info/connected').on('value',s=>{$('#sync').textContent=s.val()?'● Synchronisé · équipe '+room:'○ Hors ligne : les modifications partiront au retour du réseau'});
   ready=false;try{const c=JSON.parse(localStorage.getItem('regie_cache_'+room));if(c&&c.init){S=c;ready=true}}catch(x){}
-  // Recharge les écritures en attente depuis la session précédente (fix 3)
+  // Recharge les écritures en attente de la session précédente
   loadPending();
   view();
   R.on('value',s=>{
     const v=s.val();
     if(!v){if(!isRO)R.update(DEF(newMode));return}
-    // On superpose les écritures locales non encore synchronisées (fix 3)
+    // Superpose les écritures locales non encore synchronisées
     S = mergePending(v);
     ready=true;
     try{localStorage.setItem('regie_cache_'+room, JSON.stringify(S))}catch(x){}
