@@ -73,7 +73,7 @@ section.card{border:0;padding:0}.wrap{padding:0}}
 const manifest = {
   name: "Régie de tournage",
   short_name: "Régie",
-  start_url: location.pathname + location.hash,
+  start_url: location.pathname, // <--- CORRECTION ICI : On ne fige plus le lien du projet
   display: "standalone",
   background_color: "#e8edf1",
   theme_color: "#14213d",
@@ -195,7 +195,7 @@ function view(){
   $('#tabs').innerHTML=tabs().map(([k,l])=>`<button role="tab" aria-selected="${k===tab}" data-tab="${k}">${l}</button>`).join('');
   const m=$('#main');
   
-  // --- NOUVEL ÉCRAN D'ACCUEIL SIMPLIFIÉ ---
+  // --- ÉCRAN D'ACCUEIL SIMPLIFIÉ ---
   if(SYNC&&!room){
     $('#tabs').innerHTML='';
     m.innerHTML=`<section class="card">
@@ -377,6 +377,7 @@ $('#fileIn').addEventListener('change', function(e) {
 function connect(){
   $('#leave').hidden=false;
   $('#del_room').hidden=false;
+  try{localStorage.setItem(RK, room)}catch(x){} // <--- Mémorisation de l'équipe rejointe
   if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
   const db=firebase.database();R=db.ref('rooms/'+room);
   db.ref('.info/connected').on('value',s=>{$('#sync').textContent=s.val()?'● Synchronisé · équipe '+room:'○ Connexion…'});
