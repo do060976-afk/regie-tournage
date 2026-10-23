@@ -194,9 +194,25 @@ function view(){
   if(!tabs().some(x=>x[0]===tab))tab='chrono';
   $('#tabs').innerHTML=tabs().map(([k,l])=>`<button role="tab" aria-selected="${k===tab}" data-tab="${k}">${l}</button>`).join('');
   const m=$('#main');
+  
+  // --- NOUVEL ÉCRAN D'ACCUEIL SIMPLIFIÉ ---
   if(SYNC&&!room){
     $('#tabs').innerHTML='';
-    m.innerHTML=`<section class="card"><h2>Rejoindre une équipe</h2><p class="muted">Le code d’équipe donne accès aux données partagées. Gardez-le entre vous : toute personne qui l’a peut modifier le planning.</p><div class="add"><input id="rc" placeholder="Code d’équipe"><button class="btn" data-act="join">Rejoindre</button></div><h3>Ou créer une nouvelle équipe</h3><div class="add"><select id="rm" aria-label="Type de projet"><option value="48h">Concours 48 h</option><option value="classic">Tournage classique</option></select><button class="btn ghost" data-act="new">Créer</button></div></section>`;tick();return}
+    m.innerHTML=`<section class="card">
+      <h2>Bienvenue sur votre Régie</h2>
+      <p class="muted" style="margin-bottom:20px;">Pour rejoindre une équipe existante, il vous suffit de cliquer sur le lien que l'on vous a partagé.</p>
+      <h3>Créer un nouveau projet</h3>
+      <p class="muted">Choisissez le type de projet ci-dessous. L'application générera automatiquement un code et un lien pour inviter votre équipe.</p>
+      <div class="add" style="margin-top:15px;">
+        <select id="rm" aria-label="Type de projet">
+          <option value="48h">Concours 48 h</option>
+          <option value="classic">Tournage classique</option>
+        </select>
+        <button class="btn" data-act="new">Créer l'équipe</button>
+      </div>
+    </section>`;
+    tick();return;
+  }
   if(!ready){m.innerHTML='<p class="muted">Connexion à l’équipe…</p>';return}
   const names=L('team').map(p=>`<option value="${esc(p.n)}">`).join('');
   const dl=`<datalist id="who">${names}</datalist>`;
@@ -296,10 +312,10 @@ document.addEventListener('click',e=>{
     $('#fileIn').click();
     return;
   }
-  else if(d.act==='join'||d.act==='new'){
-    let c=d.act==='join'?v('rc').replace(/[^\w-]/g,''):Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>'abcdefghjkmnpqrstuvwxyz23456789'[b%31]).join('');
-    if(c.length<4){alert('Le code doit faire au moins 4 caractères.');return}
-    newMode=d.act==='new'?(($('#rm')||{}).value||'48h'):'48h';room=c;history.replaceState(null,'','#'+room);try{localStorage.setItem(RK,room)}catch(x){}connect();
+  else if(d.act==='new'){
+    let c=Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>'abcdefghjkmnpqrstuvwxyz23456789'[b%31]).join('');
+    newMode=($('#rm')||{}).value||'48h';
+    room=c;history.replaceState(null,'','#'+room);try{localStorage.setItem(RK,room)}catch(x){}connect();
   }
   else if(d.add){const k=d.add,a1=v('a1'),a2=v('a2'),a3=v('a3');if(!a1&&k!=='timeline')return;const id=uid(),o=Date.now();
     if(k==='team')put('team/'+id,{n:a1,r:a2,tel:a3,o});
