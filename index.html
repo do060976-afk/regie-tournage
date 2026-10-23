@@ -374,11 +374,15 @@ const FIREBASE_CONFIG={
 };
 /* ====================================== */
 
-/* ====== CODE ADMINISTRATEUR ====== */
+/* ====== CONFIRMATION ADMINISTRATEUR ====== */
+// Attention : un code inclus dans un fichier HTML n’est pas une protection de sécurité.
+// Les droits réels de création/suppression/restauration doivent être imposés dans Firebase.
 const ADMIN_CODE = "cinema";
-/* ================================= */
+/* ========================================= */
 
 const $=s=>document.querySelector(s);
+// Préférence d'affichage persistante, sans empêcher le fonctionnement si le stockage est indisponible.
+try { const savedTheme=localStorage.getItem('regie_theme'); if(savedTheme==='dark'||savedTheme==='light') document.documentElement.dataset.theme=savedTheme; } catch(e) {}
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const SYNC=typeof firebase!=='undefined'&&!/COLLEZ/.test(FIREBASE_CONFIG.apiKey)&&!!FIREBASE_CONFIG.databaseURL;
 const isRO = /readonly/.test(location.search+location.hash);
@@ -437,10 +441,10 @@ async function loadWx(){
   if(WX[key]){out(WX[key]);return}
   out('Chargement de la météo…');
   try{
-    const g=await(await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=fr&name='+encodeURIComponent(v))).json();
+    const gr=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=fr&name='+encodeURIComponent(v));if(!gr.ok)throw new Error('Geocodage HTTP '+gr.status);const g=await gr.json();
     if(!g.results){out('Ville introuvable.');return}
     const {latitude:la,longitude:lo,name}=g.results[0];
-    const f=await(await fetch('https://api.open-meteo.com/v1/forecast?latitude='+la+'&longitude='+lo+'&timezone=auto&start_date='+day+'&end_date='+day+'&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset')).json();
+    const fr=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+la+'&longitude='+lo+'&timezone=auto&start_date='+day+'&end_date='+day+'&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset');if(!fr.ok)throw new Error('Météo HTTP '+fr.status);const f=await fr.json();
     if(!f.daily||!f.daily.time||!f.daily.time.length){out('Prévision indisponible pour cette date (limite : environ 16 jours).');return}
     const d=f.daily,sr=d.sunrise[0],ss=d.sunset[0],hh=t=>t.slice(11,16),pl=(t,h)=>{const x=new Date(t);x.setHours(x.getHours()+h);return p2(x.getHours())+':'+p2(x.getMinutes())};
     const txt=wmo(d.weathercode[0])+', '+Math.round(d.temperature_2m_min[0])+'° à '+Math.round(d.temperature_2m_max[0])+'°, pluie '+(d.precipitation_probability_max[0]||0)+' %. Lever '+hh(sr)+', coucher '+hh(ss)+'. Golden hour : '+hh(sr)+'–'+pl(sr,1)+' et '+pl(ss,-1)+'–'+hh(ss)+'.';
@@ -484,7 +488,9 @@ function setIn(o,p,v){for(let i=0;i<p.length-1;i++)o=o[p[i]]=o[p[i]]||{};const k
    FIX 1 + FIX 3 : écriture locale optimiste + debounce Firebase
    ============================================================ */
 const DEBOUNCE_MS = 350;
-const pendingWrites = {};
+const RETRY_MS = 2500;
+const pendingWrites = Object.create(null);
+let pendingRoom = ''; // Empêche les écritures d'une équipe d'être envoyées vers une autre.
 
 function savePending(){
   if(!SYNC || !room) return;
@@ -497,40 +503,57 @@ function savePending(){
   }catch(e){}
 }
 
+function scheduleWrite(path, delay=DEBOUNCE_MS){
+  const w=pendingWrites[path];
+  if(!w || !R) return;
+  clearTimeout(w.timer);
+  w.timer=setTimeout(()=>sendPending(path,w),delay);
+}
+
+async function sendPending(path,w){
+  if(!R || pendingWrites[path]!==w) return;
+  clearTimeout(w.timer);
+  w.timer=null;
+  try{
+    await R.child(path).set(w.v==null?null:w.v);
+    // Ne retirer que la version réellement envoyée : une modification plus récente
+    // peut avoir été saisie pendant l'écriture réseau.
+    if(pendingWrites[path]===w) delete pendingWrites[path];
+    savePending();
+  }catch(e){
+    console.warn('FB write failed; conservée pour nouvel essai',path,e);
+    if(pendingWrites[path]===w) scheduleWrite(path,RETRY_MS);
+    savePending();
+    const el=$('#sync'); if(el) el.textContent='⚠ Synchronisation en attente — vos changements restent enregistrés localement';
+  }
+}
+
 function loadPending(){
   if(!SYNC || !room) return;
   try{
     const p = JSON.parse(localStorage.getItem('regie_pending_'+room) || '{}');
+    if(!p || typeof p!=='object' || Array.isArray(p)) return;
     Object.entries(p).forEach(([path,v])=>{
-      pendingWrites[path] = {
-        v: v,
-        timer: setTimeout(()=>{
-          const w = pendingWrites[path];
-          if(!w) return;
-          delete pendingWrites[path];
-          savePending();
-          if(R) R.child(path).set(w.v==null?null:w.v).catch(e=>console.warn('FB write failed',path,e));
-        }, DEBOUNCE_MS)
-      };
+      if(!/^[\w-]+(?:\/[\w-]+)*$/.test(path)) return;
+      pendingWrites[path]={v,timer:null};
+      scheduleWrite(path);
     });
-  }catch(e){}
+  }catch(e){console.warn('Impossible de relire les écritures en attente',e)}
 }
 
 function mergePending(serverVal){
-  const v = serverVal || {};
-  Object.entries(pendingWrites).forEach(([path,w])=>{
-    setIn(v, path.split('/'), w.v);
-  });
+  // Ne jamais modifier directement l'objet reçu de Firebase.
+  const v = serverVal && typeof serverVal==='object' ? JSON.parse(JSON.stringify(serverVal)) : {};
+  Object.entries(pendingWrites).forEach(([path,w])=>setIn(v,path.split('/'),w.v));
   return v;
 }
 
 function flushPending(){
   if(!SYNC || !R) return;
-  Object.keys(pendingWrites).forEach(path=>{
-    const w = pendingWrites[path];
-    clearTimeout(w.timer);
-    R.child(path).set(w.v==null?null:w.v).catch(e=>console.warn('FB write failed',path,e));
-    delete pendingWrites[path];
+  Object.entries(pendingWrites).forEach(([path,w])=>{
+    clearTimeout(w.timer); w.timer=null;
+    // Les écritures restent dans pendingWrites et localStorage jusqu'à confirmation.
+    sendPending(path,w);
   });
   savePending();
 }
@@ -541,26 +564,11 @@ function put(path, v, immediate){
   const cacheKey = SYNC ? 'regie_cache_'+room : LK;
   try{ localStorage.setItem(cacheKey, JSON.stringify(S)) }catch(e){}
   if(!SYNC || !R) return;
-  if(pendingWrites[path]){
-    clearTimeout(pendingWrites[path].timer);
-    delete pendingWrites[path];
-  }
-  if(immediate){
-    R.child(path).set(v==null?null:v).catch(e=>console.warn('FB write failed',path,e));
-    savePending();
-    return;
-  }
-  pendingWrites[path] = {
-    v: v,
-    timer: setTimeout(()=>{
-      const w = pendingWrites[path];
-      if(!w) return;
-      delete pendingWrites[path];
-      savePending();
-      R.child(path).set(w.v==null?null:w.v).catch(e=>console.warn('FB write failed',path,e));
-    }, DEBOUNCE_MS)
-  };
+  if(pendingWrites[path]) clearTimeout(pendingWrites[path].timer);
+  const w={v,timer:null};
+  pendingWrites[path]=w;
   savePending();
+  if(immediate) sendPending(path,w); else scheduleWrite(path);
 }
 /* ============================================================ */
 
@@ -740,13 +748,13 @@ document.addEventListener('click',e=>{
   }
   else if(d.act==='export'){
     const exportData = { version: 2, room: room || "local", data: S };
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {type:'application/json;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
     const dlAnchor = document.createElement('a');
-    dlAnchor.setAttribute("href", dataStr);
-    dlAnchor.setAttribute("download", "sauvegarde-" + (room || "local") + "-" + new Date().toISOString().slice(0,10) + ".json");
-    document.body.appendChild(dlAnchor);
-    dlAnchor.click();
-    dlAnchor.remove();
+    dlAnchor.href = url;
+    dlAnchor.download = "sauvegarde-" + (room || "local") + "-" + new Date().toISOString().slice(0,10) + ".json";
+    document.body.appendChild(dlAnchor); dlAnchor.click(); dlAnchor.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
     return;
   }
   else if(d.act==='paste'){
@@ -765,15 +773,33 @@ document.addEventListener('click',e=>{
     newMode=($('#rm')||{}).value||'48h';
     room=c;history.replaceState(null,'','#'+room);try{localStorage.setItem(RK,room)}catch(x){}connect();
   }
-  else if(d.add){const k=d.add,a1=v('a1'),a2=v('a2'),a3=v('a3');if(!a1&&k!=='timeline')return;const id=uid(),o=Date.now();
+  else if(d.add){
+    const k=d.add;
+    // Lire les champs dans la ligne du bouton cliqué, plutôt que de dépendre
+    // uniquement d'identifiants globaux, puis valider la saisie.
+    const row=t.closest('.add');
+    const fields=row ? Array.from(row.querySelectorAll('input')) : [];
+    const readField=(i)=>((fields[i]&&fields[i].value)||'').trim();
+    const a1=readField(0),a2=readField(1),a3=readField(2);
+    if(!a1&&k!=='timeline'){
+      const first=row&&row.querySelector('input');
+      if(first) first.focus();
+      return;
+    }
+    const id=uid(),o=Date.now();
+    if(k==='dataTracker' && (!S.dataTracker || typeof S.dataTracker!=='object' || Array.isArray(S.dataTracker))) S.dataTracker={};
     if(k==='team')put('team/'+id,{n:a1,r:a2,tel:a3,o},true);
     if(k==='tasks')put('tasks/'+id,{t:a1,who:a2,s:0,o},true);
     if(k==='scenes')put('scenes/'+id,{n:a1,l:a2,d:+a3||0,s:0,day:v('a4'),o},true);
-    if(k==='cph'){if(!a2||!a3){alert('Indiquez les dates de début et de fin.');return}put('cph/'+id,{n:a1,from:a2,to:a3,s:0,o},true)}
+    if(k==='cph'){if(!a2||!a3){alert('Indiquez les dates de début et de fin.');return}if(a3<a2){alert('La date de fin doit être postérieure ou égale à la date de début.');return}if((new Date(a3+'T12:00:00')-new Date(a2+'T12:00:00'))/86400000>59){alert('Une phase ne peut pas dépasser 60 jours.');return}put('cph/'+id,{n:a1,from:a2,to:a3,s:0,o},true)}
     if(k==='budget')put('budget/'+id,{t:a1,est:+a2||0,real:+a3||0,o},true);
     if(k==='permis')put('permis/'+id,{t:a1,type:a2,who:a3,s:0,o},true);
     if(k==='gear')put('gear/'+id,{t:a1,who:a2,k:0,o},true);
-    if(k==='dataTracker')put('dataTracker/'+id,{t:a1,s:0,o},true);
+    if(k==='dataTracker'){
+      put('dataTracker/'+id,{t:a1,s:0,o},true);
+      // Le rendu de la liste se fait juste après le gestionnaire de clic.
+      if(fields[0]) fields[0].value='';
+    }
     if(k==='sleep'){if(!a2||!(+a3>0)){alert('Indiquez un début et une durée en heures.');return}put('sleep/'+id,{who:a1,at:a2,h:+a3,o},true)}
     if(k==='timeline')put('timeline/'+id,{start:a1,end:a2,desc:a3,o},true);
   }
@@ -811,6 +837,7 @@ document.addEventListener('focusout',()=>setTimeout(()=>{if(pending&&!typing())v
 $('#theme').onclick=()=>{
   const r=document.documentElement;
   r.dataset.theme = (r.dataset.theme==='dark') ? 'light' : 'dark';
+  try { localStorage.setItem('regie_theme', r.dataset.theme); } catch(e) {}
 };
 
 window.addEventListener('hashchange',()=>location.reload());
@@ -820,41 +847,52 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 window.addEventListener('pagehide',flushPending);
 window.addEventListener('beforeunload',flushPending);
 
-function processImport(parsed) {
-  let targetRoom = room;
-  let targetData = parsed;
-
-  if (parsed.version === 2 && parsed.data) {
-    targetRoom = parsed.room;
-    targetData = parsed.data;
+function validateImport(parsed){
+  if(!parsed || typeof parsed!=='object' || Array.isArray(parsed)) return {ok:false,reason:'Le fichier doit contenir un objet JSON.'};
+  const data=(parsed.version===2 && parsed.data && typeof parsed.data==='object')?parsed.data:parsed;
+  if(!data || Array.isArray(data) || data.init!==1) return {ok:false,reason:'Sauvegarde non reconnue : champ « init » manquant ou invalide.'};
+  if(data.mode!==undefined && !['48h','classic'].includes(data.mode)) return {ok:false,reason:'Le mode du projet est invalide.'};
+  for(const k of ['c','phases','team','tasks','scenes','gear','budget','permis','timeline','cph','dataTracker','sleep','rapport','conv']){
+    if(data[k]!==undefined && (data[k]===null || typeof data[k]!=='object')) return {ok:false,reason:'Structure invalide pour la rubrique « '+k+' ».'};
   }
+  const targetRoom=(parsed.version===2?parsed.room:room)||'';
+  if(targetRoom && !/^[a-zA-Z0-9_-]{1,80}$/.test(String(targetRoom))) return {ok:false,reason:'Le code d’équipe contient des caractères non autorisés.'};
+  return {ok:true,data,targetRoom:String(targetRoom)};
+}
 
-  if (!targetRoom) {
-    targetRoom = prompt("Code de l'équipe cible pour la restauration :");
-    if (!targetRoom) return;
+async function processImport(parsed) {
+  const checked=validateImport(parsed);
+  if(!checked.ok){alert('Import refusé : '+checked.reason);return}
+  let targetRoom=checked.targetRoom;
+  const targetData=checked.data;
+  if(SYNC && !targetRoom){alert('La sauvegarde ne contient pas de code d’équipe valide.');return}
+  if(!SYNC && parsed.version===2 && parsed.room && parsed.room!=='local'){
+    // En mode local, ne pas basculer silencieusement vers un espace Firebase.
+    if(!confirm('Firebase est indisponible : restaurer uniquement les données sur cet appareil ?')) return;
   }
+  if(!confirm("⚠️ ATTENTION : cela va remplacer les données actuelles du projet"+(targetRoom?" '"+targetRoom+"'":' local')+". Une sauvegarde préalable est recommandée. Continuer ?")) return;
 
-  if (!confirm("⚠️ ATTENTION : Cela va écraser toutes les données actuelles de l'équipe '" + targetRoom + "'. Continuer ?")) return;
-
-  if (SYNC) {
-    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    const db = firebase.database();
-    const ref = db.ref('rooms/' + targetRoom);
-
-    ref.set(targetData).then(() => {
-      alert("Restauration réussie ! Redirection vers l'équipe " + targetRoom);
-      if (targetRoom !== room) {
-        localStorage.setItem(RK, targetRoom);
-        location.hash = '#' + targetRoom;
-        location.search = '';
-        location.reload();
-      } else {
+  if(SYNC){
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      const db=firebase.database(),ref=db.ref('rooms/'+targetRoom);
+      await ref.set(targetData);
+      // Éviter qu'une ancienne file locale réécrive les données restaurées.
+      if(targetRoom===room){
+        Object.keys(pendingWrites).forEach(k=>{clearTimeout(pendingWrites[k].timer);delete pendingWrites[k]});
+        savePending();
+        S=targetData;
+        try{localStorage.setItem('regie_cache_'+room,JSON.stringify(S))}catch(e){}
         view();
+      }else{
+        try{localStorage.setItem(RK,targetRoom)}catch(e){}
+        location.hash='#'+targetRoom;location.search='';location.reload();
       }
-    }).catch(err => alert("Erreur Firebase : " + err.message));
-  } else {
-    S = targetData;
-    localStorage.setItem(LK, JSON.stringify(S));
+      alert('Restauration réussie.');
+    }catch(err){alert('Restauration impossible : '+(err&&err.message?err.message:'erreur de connexion ou de droits Firebase.'));}
+  }else{
+    S=targetData;
+    try{localStorage.setItem(LK,JSON.stringify(S))}catch(e){alert('Le stockage local est indisponible. Exportez vos données avant de fermer la page.');return}
     location.reload();
   }
 }
@@ -889,6 +927,13 @@ $('#fileIn').addEventListener('change', function(e) {
 });
 
 function connect(){
+  if(pendingRoom && pendingRoom!==room){
+    // La file de l'ancienne équipe reste sauvegardée sous son propre nom local.
+    // On vide seulement sa copie mémoire pour éviter toute écriture croisée.
+    Object.values(pendingWrites).forEach(w=>clearTimeout(w.timer));
+    Object.keys(pendingWrites).forEach(k=>delete pendingWrites[k]);
+  }
+  pendingRoom=room;
   $('#leave').hidden=false;
   $('#del_room').hidden=false;
   try{localStorage.setItem(RK, room)}catch(x){}
