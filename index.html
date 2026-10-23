@@ -12,9 +12,9 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101826;--surface:#182234;--ink:#e8edf5;--muted:#9aa6ba;--line:#2e3b52;--rec:#ff5a67;--ok:#5ec48a;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#101826;--surface:#182234;--ink:#e8edf5;--muted:#9aa6ba;--line:#2e3b52;--rec:#ff5a67;--ok:#5ec48a;color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5; -webkit-tap-highlight-color: transparent;}
 .wrap{max-width:860px;margin:0 auto;padding:16px}
-header.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+header.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap; margin-bottom: 10px;}
 h1{font-size:1.1rem;font-weight:800;margin:0;display:flex;align-items:center;gap:8px}
 .dot{width:12px;height:12px;border-radius:50%;background:var(--rec);animation:blink 1.4s infinite}
 @keyframes blink{50%{opacity:.25}}
@@ -24,7 +24,8 @@ h1{font-size:1.1rem;font-weight:800;margin:0;display:flex;align-items:center;gap
 #cd{font-size:clamp(2.4rem,11vw,4.6rem);font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05}
 .bar{height:10px;background:rgba(128,128,128,.35);border-radius:5px;margin-top:12px;overflow:hidden}
 #bar{height:100%;background:var(--rec);width:0}
-nav{display:flex;gap:4px;overflow-x:auto;margin:14px 0;border-bottom:2px solid var(--line)}
+nav{display:flex;gap:4px;overflow-x:auto;margin:14px 0;border-bottom:2px solid var(--line); -webkit-overflow-scrolling: touch; scrollbar-width: none;}
+nav::-webkit-scrollbar { display: none; }
 nav button{flex:0 0 auto;border:0;background:none;color:var(--muted);font:inherit;font-weight:600;padding:10px 14px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
 nav button[aria-selected=true]{color:var(--ink);border-color:var(--rec)}
 button:focus-visible,input:focus-visible,select:focus-visible,label:focus-visible{outline:3px solid var(--tape);outline-offset:1px}
@@ -56,11 +57,14 @@ input[type=checkbox]{width:22px;height:22px;flex:none}
 a.map-link{color:var(--muted);text-decoration:underline;text-underline-offset:2px}
 a.map-link:hover{color:var(--ink)}
 
-/* --- MODAL POUR COLLER LE JSON --- */
-#importModal{display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; padding:20px; align-items:center; justify-content:center;}
-#importModal>div{background:var(--surface); padding:20px; border-radius:8px; width:100%; max-width:500px; box-shadow:0 4px 15px rgba(0,0,0,0.3);}
-#importModal textarea{height:150px; font-family:monospace; margin-bottom:15px; font-size:12px;}
-.modal-btns{display:flex; gap:10px; justify-content:flex-end;}
+/* --- MENU OUTILS --- */
+.header-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.tools-menu { position: relative; display: inline-block; }
+.tools-menu summary { list-style: none; cursor: pointer; user-select: none; }
+.tools-menu summary::-webkit-details-marker { display: none; }
+.tools-content { position: absolute; right: 0; top: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 170px; margin-top: 5px; }
+.tools-content button, .tools-content label { width: 100%; text-align: left; margin: 0; padding: 10px; }
+.tools-content .btn.ghost { border: 0; background: var(--bg); }
 
 /* --- STYLES MODE LECTURE SEULE --- */
 body.readonly [data-add], body.readonly [data-del], body.readonly .add, body.readonly button[data-act="del_room"], body.readonly button[data-act="leave"], body.readonly label[for="fileIn"], body.readonly button[data-act="paste"], body.readonly button[data-act="export"], body.readonly input[type="file"] { display: none !important; }
@@ -69,6 +73,42 @@ body.readonly input[type="number"]::-webkit-inner-spin-button { display: none; }
 body.readonly .st { pointer-events: none; border-color: transparent; background: transparent; color: var(--muted); padding: 0; }
 body.readonly input[type="checkbox"] { display: none; }
 
+/* --- AMÉLIORATIONS SPÉCIFIQUES MOBILE --- */
+@media (max-width: 600px) {
+  .wrap { padding: 10px; }
+  .hero { padding: 16px; margin: 10px 0 8px; }
+  nav { margin: 10px 0; }
+  nav button { padding: 12px 16px; font-size: 0.95rem; }
+  section.card { padding: 12px; }
+  
+  /* Les lignes passent en mode vertical */
+  .row { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 0; }
+  .row > div, .row > input, .row > select { width: 100%; }
+  .who, .dt, .num, .tm { width: 100%; flex: 1 1 auto; }
+  
+  /* L'ajout de données prend toute la largeur */
+  .add { flex-direction: column; }
+  .add input { width: 100%; margin-bottom: 4px; }
+  .add .btn { width: 100%; padding: 12px; }
+  
+  /* Champs de saisie plus grands (évite le zoom auto sur iOS) */
+  input, select, textarea { font-size: 16px; padding: 10px; }
+  
+  /* Boutons tactiles */
+  .btn.ghost { padding: 12px; text-align: center; }
+  .delBtn { width: 100%; padding: 12px; margin-top: 4px; border: 1px dashed var(--line); color: var(--rec); }
+  .st { width: 100%; text-align: center; padding: 10px; }
+  .grid { grid-template-columns: 1fr; }
+  
+  /* Tableau de la feuille de service défilable */
+  .sheet { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .sheet table { font-size: 0.85rem; }
+  
+  /* Le menu outil prend toute la largeur si nécessaire */
+  .header-actions { width: 100%; justify-content: flex-start; }
+  .header-actions > button, .header-actions > details { flex: 1; }
+  .tools-content { width: 100%; right: auto; left: 0; }
+}
 @media print{
 :root,:root:not([data-theme="light"]),:root[data-theme="dark"]{--bg:#fff;--surface:#fff;--ink:#000;--muted:#333;--line:#999;color-scheme:light}
 header.top,.hero,nav,.noprint,.banner{display:none!important}
@@ -93,23 +133,26 @@ document.head.appendChild(manifestLink);
 </head>
 <body>
 <div class="wrap">
-<header class="top"><h1><span class="dot"></span>Régie de tournage</h1>
-<div style="display:flex; gap:8px; flex-wrap:wrap;">
-  <span class="muted" id="sync"></span> 
-  <button class="btn ghost" data-act="copy">Lien équipe</button> 
-  <button class="btn ghost" data-act="copy_ro">Lien lecture</button>
-  <button class="btn ghost" data-act="leave" id="leave" hidden>Changer d’équipe</button> 
-  <button class="btn ghost" data-act="del_room" id="del_room" hidden style="color:var(--rec); border-color:var(--rec);">Supprimer</button>
-  
-  <button class="btn ghost" data-act="export">Sauvegarder</button>
-  
-  <!-- NOUVELLE MÉTHODE DE RESTAURATION -->
-  <label for="fileIn" class="btn ghost" style="margin:0;">Fichier</label>
-  <button class="btn ghost" data-act="paste">Coller</button>
-  <input type="file" id="fileIn" accept=".json,application/json,text/plain" style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; z-index:-1;">
-  
-  <button class="btn ghost" id="theme">Thème</button>
-</div></header>
+<header class="top">
+  <h1><span class="dot"></span>Régie de tournage</h1>
+  <div class="header-actions">
+    <span class="muted" id="sync"></span> 
+    <button class="btn ghost" data-act="copy">Lien équipe</button> 
+    <button class="btn ghost" data-act="copy_ro">Lien lecture</button>
+    
+    <details class="tools-menu">
+      <summary class="btn ghost">Outils ⚙️</summary>
+      <div class="tools-content">
+        <button class="btn ghost" data-act="leave" id="leave" hidden>Changer d’équipe</button> 
+        <button class="btn ghost" data-act="del_room" id="del_room" hidden style="color:var(--rec);">Supprimer</button>
+        <button class="btn ghost" data-act="export">Sauvegarder</button>
+        <label for="fileIn" class="btn ghost">Fichier</label>
+        <button class="btn ghost" data-act="paste">Coller</button>
+        <button class="btn ghost" id="theme">Thème</button>
+      </div>
+    </details>
+  </div>
+</header>
 <div id="ban"></div>
 <div class="hero"><small id="cdl">Chargement…</small><div id="cd">--:--:--</div><div class="bar"><div id="bar"></div></div><small id="cph"></small></div>
 <nav role="tablist" id="tabs"></nav>
@@ -117,17 +160,18 @@ document.head.appendChild(manifestLink);
 </div>
 
 <!-- FENÊTRE POUR COLLER LE TEXTE -->
-<div id="importModal">
-  <div>
+<div id="importModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; padding:20px; align-items:center; justify-content:center;">
+  <div style="background:var(--surface); padding:20px; border-radius:8px; width:100%; max-width:500px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
     <h3>Coller la sauvegarde</h3>
     <p class="muted" style="margin-top:5px;">Ouvrez votre fichier .json avec un éditeur de texte, copiez tout son contenu et collez-le dans la case ci-dessous.</p>
-    <textarea id="importText" placeholder='{"init":1,"mode":"48h",...}'></textarea>
-    <div class="modal-btns">
+    <textarea id="importText" style="height:150px; font-family:monospace; margin-bottom:15px; font-size:12px;" placeholder='{"init":1,"mode":"48h",...}'></textarea>
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
       <button class="btn ghost" id="cancelImportText">Annuler</button>
       <button class="btn" id="doImportText">Restaurer</button>
     </div>
   </div>
 </div>
+<input type="file" id="fileIn" accept=".json,application/json,text/plain" style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; z-index:-1;">
 
 <script>
 /* ====== 1. CONFIGURATION FIREBASE ====== */
@@ -181,7 +225,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const t0=()=>new Date(S.start).getTime();
 const fmt=ts=>new Date(ts).toLocaleString('fr-FR',{weekday:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
 const hms=ms=>{const s=Math.max(0,Math.round(ms/1000));return p2(s/3600)+':'+p2(s%3600/60)+':'+p2(s%60)};
-const typing=()=>{const a=document.activeElement;return a&&a.closest&&a.closest('#main')&&/INPUT|SELECT/.test(a.tagName)};
+const typing=()=>{const a=document.activeElement;return a&&a.closest&&a.closest('#main')&&/INPUT|SELECT|TEXTAREA/.test(a.tagName)};
 function times(){let c=t0();return(S.phases||[]).map(p=>{const s=c;c+=(+p.h||0)*36e5;return[s,c]})}
 function setIn(o,p,v){for(let i=0;i<p.length-1;i++)o=o[p[i]]=o[p[i]]||{};const k=p[p.length-1];if(v==null)delete o[k];else o[k]=v}
 function put(path,v){
@@ -215,7 +259,7 @@ function tick(){
 }
 
 const addRow=(k,ph1,ph2,ph3,t2,t3)=>`<div class="add"><input id="a1" placeholder="${ph1}">${ph2?`<input id="a2" ${t2||''} placeholder="${ph2}" list="who">`:''}${ph3?`<input id="a3" ${t3||''} placeholder="${ph3}">`:''}<button class="btn" data-add="${k}">Ajouter</button></div>`;
-const delBtn=(k,id)=>`<button class="btn ghost" data-del="${k}" data-id="${id}" aria-label="Supprimer">×</button>`;
+const delBtn=(k,id)=>`<button class="btn ghost delBtn" data-del="${k}" data-id="${id}" aria-label="Supprimer">Supprimer ×</button>`;
 const edit=(k,id,f,v,ph)=>`<input class="who" data-edit="${k}" data-id="${id}" data-f="${f}" value="${esc(v)}" placeholder="${ph}" list="who">`;
 
 function view(){
@@ -299,6 +343,13 @@ function view(){
     <h3>Matériel restant à rassembler</h3><p>${L('gear').filter(x=>!x.k).map(x=>esc(x.t)+(x.who?' ('+esc(x.who)+')':'')).join(', ')||'Tout est prêt.'}</p></section>`}
   tick();updBud();
 }
+
+// Fermer le menu Outils quand on clique sur un bouton à l'intérieur
+document.querySelector('.tools-content').addEventListener('click', (e) => {
+  if (e.target.closest('button') || e.target.closest('label')) {
+    document.querySelector('.tools-menu').removeAttribute('open');
+  }
+});
 
 document.addEventListener('click',e=>{
   const t=e.target.closest('[data-tab],[data-add],[data-del],[data-st],[data-act]');if(!t)return;
