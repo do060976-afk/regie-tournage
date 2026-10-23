@@ -12,58 +12,61 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101826;--surface:#182234;--ink:#e8edf5;--muted:#9aa6ba;--line:#2e3b52;--rec:#ff5a67;--ok:#5ec48a;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#101826;--surface:#182234;--ink:#e8edf5;--muted:#9aa6ba;--line:#2e3b52;--rec:#ff5a67;--ok:#5ec48a;color-scheme:dark}
 *{box-sizing:border-box}
+html, body { max-width: 100%; overflow-x: hidden; }
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5; -webkit-tap-highlight-color: transparent;}
-.wrap{max-width:860px;margin:0 auto;padding:16px}
-header.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap; margin-bottom: 10px;}
+.wrap{max-width:860px;margin:0 auto;padding:16px; width: 100%;}
+header.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap; margin-bottom: 10px; width: 100%;}
 h1{font-size:1.1rem;font-weight:800;margin:0;display:flex;align-items:center;gap:8px}
 .dot{width:12px;height:12px;border-radius:50%;background:var(--rec);animation:blink 1.4s infinite}
 @keyframes blink{50%{opacity:.25}}
 @media (prefers-reduced-motion:reduce){.dot{animation:none}}
-.hero{margin:14px 0 8px;padding:20px;background:var(--ink);color:var(--bg);border-radius:6px;border-bottom:8px solid var(--tape)}
+.hero{margin:14px 0 8px;padding:20px;background:var(--ink);color:var(--bg);border-radius:6px;border-bottom:8px solid var(--tape); width: 100%; box-sizing: border-box;}
 .hero small{opacity:.8}
 #cd{font-size:clamp(2.4rem,11vw,4.6rem);font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05}
 .bar{height:10px;background:rgba(128,128,128,.35);border-radius:5px;margin-top:12px;overflow:hidden}
 #bar{height:100%;background:var(--rec);width:0}
-nav{display:flex;gap:4px;overflow-x:auto;margin:14px 0;border-bottom:2px solid var(--line); -webkit-overflow-scrolling: touch; scrollbar-width: none;}
+nav{display:flex;gap:4px;overflow-x:auto;margin:14px 0;border-bottom:2px solid var(--line); -webkit-overflow-scrolling: touch; scrollbar-width: none; width: 100%;}
 nav::-webkit-scrollbar { display: none; }
 nav button{flex:0 0 auto;border:0;background:none;color:var(--muted);font:inherit;font-weight:600;padding:10px 14px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
 nav button[aria-selected=true]{color:var(--ink);border-color:var(--rec)}
 button:focus-visible,input:focus-visible,select:focus-visible,label:focus-visible{outline:3px solid var(--tape);outline-offset:1px}
-section.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:14px}
+section.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:14px; width: 100%; box-sizing: border-box; overflow: hidden;}
 h2{font-size:1.05rem;margin:0 0 10px}
 h3{font-size:.95rem;margin:14px 0 4px}
 label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:3px}
-input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px;width:100%;min-width:0}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px;width:100%;min-width:0; box-sizing: border-box; max-width: 100%;}
 input[type=checkbox]{width:22px;height:22px;flex:none}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
-.row{display:flex;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.row{display:flex;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap; width: 100%;}
 .row.first{border-top:0}
 .grow{flex:1 1 140px;min-width:0}
 .who{flex:0 1 150px}.dt{flex:0 1 150px}.num{flex:0 0 110px}.tm{width:120px}
-.btn{font:inherit;font-weight:600;border:0;border-radius:4px;padding:8px 14px;background:var(--ink);color:var(--bg);cursor:pointer;text-align:center;text-decoration:none}
+.btn{font:inherit;font-weight:600;border:0;border-radius:4px;padding:8px 14px;background:var(--ink);color:var(--bg);cursor:pointer;text-align:center;text-decoration:none; display: inline-block;}
 .btn.ghost{background:none;color:var(--muted);border:1px solid var(--line);padding:6px 10px}
-.phase{display:grid;grid-template-columns:1fr 78px;gap:4px 10px;padding:10px 12px;border-left:6px solid var(--line);margin-bottom:6px;background:var(--bg);border-radius:0 4px 4px 0}
+.phase{display:grid;grid-template-columns:1fr 78px;gap:4px 10px;padding:10px 12px;border-left:6px solid var(--line);margin-bottom:6px;background:var(--bg);border-radius:0 4px 4px 0; width: 100%;}
 .phase.now{border-color:var(--rec);background:color-mix(in srgb,var(--tape) 28%,var(--bg))}
 .phase.past{opacity:.55;border-color:var(--ok)}
 .phase small{color:var(--muted)}
-.st{font-weight:600;border-radius:12px;padding:4px 12px;border:2px solid var(--line);background:none;color:var(--ink);cursor:pointer;font-family:inherit}
+.st{font-weight:600;border-radius:12px;padding:4px 12px;border:2px solid var(--line);background:none;color:var(--ink);cursor:pointer;font-family:inherit; display: inline-block;}
 .st.s1{border-color:var(--tape);background:var(--tape);color:#14213d}.st.s2{border-color:var(--ok);background:var(--ok);color:#fff}
 .done{text-decoration:line-through;color:var(--muted)}
 .warn{color:var(--rec);font-weight:600}
 .muted{color:var(--muted);font-size:.9rem}
-.add{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.add input{flex:1 1 120px}
-.banner{background:var(--tape);color:#14213d;padding:10px 14px;border-radius:6px;margin-top:12px;font-weight:600}
-.sheet table{width:100%;border-collapse:collapse}.sheet td,.sheet th{text-align:left;padding:4px 8px 4px 0;border-bottom:1px solid var(--line);vertical-align:top}
-a.map-link{color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+.add{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px; width: 100%;}
+.add input{flex:1 1 120px}
+.banner{background:var(--tape);color:#14213d;padding:10px 14px;border-radius:6px;margin-top:12px;font-weight:600; word-break: break-word;}
+.sheet { width: 100%; overflow-x: auto; }
+.sheet table{width:100%;border-collapse:collapse; min-width: 500px;}.sheet td,.sheet th{text-align:left;padding:4px 8px 4px 0;border-bottom:1px solid var(--line);vertical-align:top; word-break: break-word;}
+a.map-link{color:var(--muted);text-decoration:underline;text-underline-offset:2px; word-break: break-all;}
 a.map-link:hover{color:var(--ink)}
 
 /* --- MENU OUTILS --- */
-.header-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.tools-menu { position: relative; display: inline-block; }
+.header-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; max-width: 100%;}
+.tools-menu { position: relative; display: inline-block; max-width: 100%;}
 .tools-menu summary { list-style: none; cursor: pointer; user-select: none; }
 .tools-menu summary::-webkit-details-marker { display: none; }
-.tools-content { position: absolute; right: 0; top: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 170px; margin-top: 5px; }
-.tools-content button, .tools-content label { width: 100%; text-align: left; margin: 0; padding: 10px; }
+.tools-content { position: absolute; right: 0; top: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 170px; max-width: 90vw; margin-top: 5px; box-sizing: border-box;}
+.tools-content button, .tools-content label { width: 100%; text-align: left; margin: 0; padding: 10px; box-sizing: border-box;}
 .tools-content .btn.ghost { border: 0; background: var(--bg); }
 
 /* --- STYLES MODE LECTURE SEULE --- */
@@ -81,26 +84,30 @@ body.readonly input[type="checkbox"] { display: none; }
   nav button { padding: 12px 16px; font-size: 0.95rem; }
   section.card { padding: 12px; }
   
+  /* Les lignes passent en mode vertical */
   .row { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 0; }
-  .row > div, .row > input, .row > select { width: 100%; }
+  .row > div, .row > input, .row > select { width: 100%; max-width: 100%; }
   .who, .dt, .num, .tm { width: 100%; flex: 1 1 auto; }
   
+  /* L'ajout de données prend toute la largeur */
   .add { flex-direction: column; }
-  .add input { width: 100%; margin-bottom: 4px; }
+  .add input { width: 100%; margin-bottom: 4px; flex: none; }
   .add .btn { width: 100%; padding: 12px; }
   
+  /* Champs de saisie plus grands */
   input, select, textarea { font-size: 16px; padding: 10px; }
   
+  /* Boutons tactiles */
   .btn.ghost { padding: 12px; text-align: center; }
   .delBtn { width: 100%; padding: 12px; margin-top: 4px; border: 1px dashed var(--line); color: var(--rec); }
   .st { width: 100%; text-align: center; padding: 10px; }
   .grid { grid-template-columns: 1fr; }
   
-  .sheet { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .sheet table { font-size: 0.85rem; }
   
-  .header-actions { width: 100%; justify-content: flex-start; }
-  .header-actions > button, .header-actions > details { flex: 1; }
+  /* Le menu outil prend toute la largeur si nécessaire */
+  .header-actions { width: 100%; justify-content: space-between; }
+  .header-actions > button, .header-actions > details { flex: 1 1 auto; text-align: center; }
   .tools-content { width: 100%; right: auto; left: 0; }
 }
 @media print{
@@ -154,11 +161,11 @@ document.head.appendChild(manifestLink);
 </div>
 
 <!-- FENÊTRE POUR COLLER LE TEXTE -->
-<div id="importModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; padding:20px; align-items:center; justify-content:center;">
-  <div style="background:var(--surface); padding:20px; border-radius:8px; width:100%; max-width:500px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+<div id="importModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; padding:20px; align-items:center; justify-content:center; box-sizing: border-box;">
+  <div style="background:var(--surface); padding:20px; border-radius:8px; width:100%; max-width:500px; box-shadow:0 4px 15px rgba(0,0,0,0.3); box-sizing: border-box;">
     <h3>Coller la sauvegarde</h3>
     <p class="muted" style="margin-top:5px;">Collez ici le contenu de votre fichier .json. Si l'équipe n'existe plus, le code d'équipe vous sera demandé.</p>
-    <textarea id="importText" style="height:150px; font-family:monospace; margin-bottom:15px; font-size:12px;" placeholder='{"version":2,"room":"...","data":{...}}'></textarea>
+    <textarea id="importText" style="height:150px; font-family:monospace; margin-bottom:15px; font-size:12px; width: 100%; box-sizing: border-box;" placeholder='{"version":2,"room":"...","data":{...}}'></textarea>
     <div style="display:flex; gap:10px; justify-content:flex-end;">
       <button class="btn ghost" id="cancelImportText">Annuler</button>
       <button class="btn" id="doImportText">Restaurer</button>
@@ -377,7 +384,6 @@ document.addEventListener('click',e=>{
     return;
   }
   else if(d.act==='export'){
-    // EXPORTATION : on sauvegarde l'équipe ET les données
     const exportData = { version: 2, room: room || "local", data: S };
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
     const dlAnchor = document.createElement('a');
@@ -437,18 +443,15 @@ document.addEventListener('focusout',()=>setTimeout(()=>{if(pending&&!typing())v
 $('#theme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark'};
 window.addEventListener('hashchange',()=>location.reload());
 
-// --- GESTION DE LA RESTAURATION ---
 function processImport(parsed) {
   let targetRoom = room;
   let targetData = parsed;
 
-  // Détection du nouveau format d'export
   if (parsed.version === 2 && parsed.data) {
     targetRoom = parsed.room;
     targetData = parsed.data;
   }
 
-  // Si on n'est pas dans une équipe, ou si on restaure un projet d'une autre équipe
   if (!targetRoom) {
     targetRoom = prompt("Code de l'équipe cible pour la restauration :");
     if (!targetRoom) return;
@@ -466,7 +469,7 @@ function processImport(parsed) {
       if (targetRoom !== room) {
         localStorage.setItem(RK, targetRoom);
         location.hash = '#' + targetRoom;
-        location.search = ''; // Enlève le mode readonly s'il était actif
+        location.search = ''; 
         location.reload();
       } else {
         view();
