@@ -27,19 +27,19 @@ h1{font-size:1.1rem;font-weight:800;margin:0;display:flex;align-items:center;gap
 nav{display:flex;gap:4px;overflow-x:auto;margin:14px 0;border-bottom:2px solid var(--line)}
 nav button{flex:0 0 auto;border:0;background:none;color:var(--muted);font:inherit;font-weight:600;padding:10px 14px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
 nav button[aria-selected=true]{color:var(--ink);border-color:var(--rec)}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--tape);outline-offset:1px}
+button:focus-visible,input:focus-visible,select:focus-visible,label:focus-visible{outline:3px solid var(--tape);outline-offset:1px}
 section.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:14px}
 h2{font-size:1.05rem;margin:0 0 10px}
 h3{font-size:.95rem;margin:14px 0 4px}
 label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:3px}
-input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px;width:100%;min-width:0}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px;width:100%;min-width:0}
 input[type=checkbox]{width:22px;height:22px;flex:none}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
 .row{display:flex;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
 .row.first{border-top:0}
 .grow{flex:1 1 140px;min-width:0}
 .who{flex:0 1 150px}.dt{flex:0 1 150px}.num{flex:0 0 110px}.tm{width:120px}
-.btn{font:inherit;font-weight:600;border:0;border-radius:4px;padding:8px 14px;background:var(--ink);color:var(--bg);cursor:pointer}
+.btn{font:inherit;font-weight:600;border:0;border-radius:4px;padding:8px 14px;background:var(--ink);color:var(--bg);cursor:pointer;text-align:center;text-decoration:none}
 .btn.ghost{background:none;color:var(--muted);border:1px solid var(--line);padding:6px 10px}
 .phase{display:grid;grid-template-columns:1fr 78px;gap:4px 10px;padding:10px 12px;border-left:6px solid var(--line);margin-bottom:6px;background:var(--bg);border-radius:0 4px 4px 0}
 .phase.now{border-color:var(--rec);background:color-mix(in srgb,var(--tape) 28%,var(--bg))}
@@ -56,8 +56,14 @@ input[type=checkbox]{width:22px;height:22px;flex:none}
 a.map-link{color:var(--muted);text-decoration:underline;text-underline-offset:2px}
 a.map-link:hover{color:var(--ink)}
 
+/* --- MODAL POUR COLLER LE JSON --- */
+#importModal{display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; padding:20px; align-items:center; justify-content:center;}
+#importModal>div{background:var(--surface); padding:20px; border-radius:8px; width:100%; max-width:500px; box-shadow:0 4px 15px rgba(0,0,0,0.3);}
+#importModal textarea{height:150px; font-family:monospace; margin-bottom:15px; font-size:12px;}
+.modal-btns{display:flex; gap:10px; justify-content:flex-end;}
+
 /* --- STYLES MODE LECTURE SEULE --- */
-body.readonly [data-add], body.readonly [data-del], body.readonly .add, body.readonly button[data-act="del_room"], body.readonly button[data-act="leave"], body.readonly button[data-act="import"], body.readonly button[data-act="export"], body.readonly input[type="file"] { display: none !important; }
+body.readonly [data-add], body.readonly [data-del], body.readonly .add, body.readonly button[data-act="del_room"], body.readonly button[data-act="leave"], body.readonly label[for="fileIn"], body.readonly button[data-act="paste"], body.readonly button[data-act="export"], body.readonly input[type="file"] { display: none !important; }
 body.readonly input, body.readonly select { pointer-events: none; border: none; background: transparent; padding: 0; appearance: none; color: var(--ink); font-weight: 600; }
 body.readonly input[type="number"]::-webkit-inner-spin-button { display: none; }
 body.readonly .st { pointer-events: none; border-color: transparent; background: transparent; color: var(--muted); padding: 0; }
@@ -94,9 +100,14 @@ document.head.appendChild(manifestLink);
   <button class="btn ghost" data-act="copy_ro">Lien lecture</button>
   <button class="btn ghost" data-act="leave" id="leave" hidden>Changer d’équipe</button> 
   <button class="btn ghost" data-act="del_room" id="del_room" hidden style="color:var(--rec); border-color:var(--rec);">Supprimer</button>
+  
   <button class="btn ghost" data-act="export">Sauvegarder</button>
-  <button class="btn ghost" data-act="import">Restaurer</button>
+  
+  <!-- NOUVELLE MÉTHODE DE RESTAURATION -->
+  <label for="fileIn" class="btn ghost" style="margin:0;">Fichier</label>
+  <button class="btn ghost" data-act="paste">Coller</button>
   <input type="file" id="fileIn" accept=".json,application/json,text/plain" style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; z-index:-1;">
+  
   <button class="btn ghost" id="theme">Thème</button>
 </div></header>
 <div id="ban"></div>
@@ -104,6 +115,20 @@ document.head.appendChild(manifestLink);
 <nav role="tablist" id="tabs"></nav>
 <main id="main"></main>
 </div>
+
+<!-- FENÊTRE POUR COLLER LE TEXTE -->
+<div id="importModal">
+  <div>
+    <h3>Coller la sauvegarde</h3>
+    <p class="muted" style="margin-top:5px;">Ouvrez votre fichier .json avec un éditeur de texte, copiez tout son contenu et collez-le dans la case ci-dessous.</p>
+    <textarea id="importText" placeholder='{"init":1,"mode":"48h",...}'></textarea>
+    <div class="modal-btns">
+      <button class="btn ghost" id="cancelImportText">Annuler</button>
+      <button class="btn" id="doImportText">Restaurer</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ====== 1. CONFIGURATION FIREBASE ====== */
 const FIREBASE_CONFIG={
@@ -292,9 +317,8 @@ document.addEventListener('click',e=>{
   }
   else if(d.act==='leave'){try{localStorage.removeItem(RK)}catch(x){}history.replaceState(null,'',location.pathname);location.reload();return}
   else if(d.act==='del_room'){
-    // --- SÉCURITÉ ADMINISTRATEUR POUR LA SUPPRESSION ---
     const code = prompt("🔒 Code administrateur requis pour supprimer cette équipe :");
-    if (code === null) return; // Annulé
+    if (code === null) return; 
     if (code !== ADMIN_CODE) {
       alert("Code incorrect. Suppression refusée.");
       return;
@@ -318,8 +342,9 @@ document.addEventListener('click',e=>{
     dlAnchor.remove();
     return;
   }
-  else if(d.act==='import'){
-    $('#fileIn').click();
+  else if(d.act==='paste'){
+    $('#importModal').style.display = 'flex';
+    $('#importText').value = '';
     return;
   }
   else if(d.act==='new'){
@@ -366,7 +391,37 @@ document.addEventListener('focusout',()=>setTimeout(()=>{if(pending&&!typing())v
 $('#theme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark'};
 window.addEventListener('hashchange',()=>location.reload());
 
-// --- RESTAURATION JSON CORRIGÉE MOBILE ---
+// --- GESTION DE LA FENÊTRE "COLLER" ---
+$('#cancelImportText').onclick = () => { $('#importModal').style.display = 'none'; };
+$('#doImportText').onclick = () => {
+  const text = $('#importText').value.trim();
+  if (!text) { alert("Veuillez coller le contenu du fichier."); return; }
+  try {
+    const parsed = JSON.parse(text);
+    if (confirm("⚠️ ATTENTION : Cela va écraser toutes les données actuelles avec ce texte. Continuer ?")) {
+      $('#doImportText').textContent = "Patientez...";
+      if (SYNC && R) {
+        R.set(parsed).then(() => {
+          alert("Restauration réussie ! Le projet a été mis à jour.");
+          $('#importModal').style.display = 'none';
+          $('#doImportText').textContent = "Restaurer";
+          view();
+        }).catch(err => {
+          alert("Erreur Firebase : " + err.message);
+          $('#doImportText').textContent = "Restaurer";
+        });
+      } else {
+        S = parsed;
+        localStorage.setItem(LK, JSON.stringify(S));
+        location.reload();
+      }
+    }
+  } catch(err) {
+    alert("Le texte collé n'est pas un JSON valide.");
+  }
+};
+
+// --- FICHIER JSON (MÉTHODE CLASSIQUE) ---
 $('#fileIn').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -377,16 +432,10 @@ $('#fileIn').addEventListener('change', function(e) {
       setTimeout(() => {
         if (confirm("⚠️ ATTENTION : Cela va écraser toutes les données actuelles de l'équipe avec ce fichier. Continuer ?")) {
           if (SYNC && R) {
-            const btn = document.querySelector('[data-act="import"]');
-            if(btn) btn.textContent = "Patientez...";
             R.set(parsed).then(() => {
               alert("Restauration réussie ! Le projet a été mis à jour.");
-              if(btn) btn.textContent = "Restaurer";
               view(); 
-            }).catch(err => {
-              alert("Erreur Firebase : " + err.message);
-              if(btn) btn.textContent = "Restaurer";
-            });
+            }).catch(err => alert("Erreur Firebase : " + err.message));
           } else {
             S = parsed;
             localStorage.setItem(LK, JSON.stringify(S));
@@ -398,10 +447,6 @@ $('#fileIn').addEventListener('change', function(e) {
       alert("Erreur : le fichier sélectionné n'est pas un JSON valide.");
     }
     e.target.value = ''; 
-  };
-  reader.onerror = function() {
-    alert("Erreur lors de la lecture du fichier par le téléphone.");
-    e.target.value = '';
   };
   reader.readAsText(file);
 });
