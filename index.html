@@ -81,30 +81,24 @@ body.readonly input[type="checkbox"] { display: none; }
   nav button { padding: 12px 16px; font-size: 0.95rem; }
   section.card { padding: 12px; }
   
-  /* Les lignes passent en mode vertical */
   .row { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 0; }
   .row > div, .row > input, .row > select { width: 100%; }
   .who, .dt, .num, .tm { width: 100%; flex: 1 1 auto; }
   
-  /* L'ajout de données prend toute la largeur */
   .add { flex-direction: column; }
   .add input { width: 100%; margin-bottom: 4px; }
   .add .btn { width: 100%; padding: 12px; }
   
-  /* Champs de saisie plus grands (évite le zoom auto sur iOS) */
   input, select, textarea { font-size: 16px; padding: 10px; }
   
-  /* Boutons tactiles */
   .btn.ghost { padding: 12px; text-align: center; }
   .delBtn { width: 100%; padding: 12px; margin-top: 4px; border: 1px dashed var(--line); color: var(--rec); }
   .st { width: 100%; text-align: center; padding: 10px; }
   .grid { grid-template-columns: 1fr; }
   
-  /* Tableau de la feuille de service défilable */
   .sheet { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .sheet table { font-size: 0.85rem; }
   
-  /* Le menu outil prend toute la largeur si nécessaire */
   .header-actions { width: 100%; justify-content: flex-start; }
   .header-actions > button, .header-actions > details { flex: 1; }
   .tools-content { width: 100%; right: auto; left: 0; }
@@ -163,8 +157,8 @@ document.head.appendChild(manifestLink);
 <div id="importModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; padding:20px; align-items:center; justify-content:center;">
   <div style="background:var(--surface); padding:20px; border-radius:8px; width:100%; max-width:500px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
     <h3>Coller la sauvegarde</h3>
-    <p class="muted" style="margin-top:5px;">Ouvrez votre fichier .json avec un éditeur de texte, copiez tout son contenu et collez-le dans la case ci-dessous.</p>
-    <textarea id="importText" style="height:150px; font-family:monospace; margin-bottom:15px; font-size:12px;" placeholder='{"init":1,"mode":"48h",...}'></textarea>
+    <p class="muted" style="margin-top:5px;">Collez ici le contenu de votre fichier .json. Si l'équipe n'existe plus, le code d'équipe vous sera demandé.</p>
+    <textarea id="importText" style="height:150px; font-family:monospace; margin-bottom:15px; font-size:12px;" placeholder='{"version":2,"room":"...","data":{...}}'></textarea>
     <div style="display:flex; gap:10px; justify-content:flex-end;">
       <button class="btn ghost" id="cancelImportText">Annuler</button>
       <button class="btn" id="doImportText">Restaurer</button>
@@ -344,7 +338,6 @@ function view(){
   tick();updBud();
 }
 
-// Fermer le menu Outils quand on clique sur un bouton à l'intérieur
 document.querySelector('.tools-content').addEventListener('click', (e) => {
   if (e.target.closest('button') || e.target.closest('label')) {
     document.querySelector('.tools-menu').removeAttribute('open');
@@ -384,7 +377,9 @@ document.addEventListener('click',e=>{
     return;
   }
   else if(d.act==='export'){
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(S, null, 2));
+    // EXPORTATION : on sauvegarde l'équipe ET les données
+    const exportData = { version: 2, room: room || "local", data: S };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
     const dlAnchor = document.createElement('a');
     dlAnchor.setAttribute("href", dataStr);
     dlAnchor.setAttribute("download", "sauvegarde-" + (room || "local") + "-" + new Date().toISOString().slice(0,10) + ".json");
@@ -442,37 +437,61 @@ document.addEventListener('focusout',()=>setTimeout(()=>{if(pending&&!typing())v
 $('#theme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark'};
 window.addEventListener('hashchange',()=>location.reload());
 
-// --- GESTION DE LA FENÊTRE "COLLER" ---
+// --- GESTION DE LA RESTAURATION ---
+function processImport(parsed) {
+  let targetRoom = room;
+  let targetData = parsed;
+
+  // Détection du nouveau format d'export
+  if (parsed.version === 2 && parsed.data) {
+    targetRoom = parsed.room;
+    targetData = parsed.data;
+  }
+
+  // Si on n'est pas dans une équipe, ou si on restaure un projet d'une autre équipe
+  if (!targetRoom) {
+    targetRoom = prompt("Code de l'équipe cible pour la restauration :");
+    if (!targetRoom) return;
+  }
+
+  if (!confirm("⚠️ ATTENTION : Cela va écraser toutes les données actuelles de l'équipe '" + targetRoom + "'. Continuer ?")) return;
+
+  if (SYNC) {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    const db = firebase.database();
+    const ref = db.ref('rooms/' + targetRoom);
+    
+    ref.set(targetData).then(() => {
+      alert("Restauration réussie ! Redirection vers l'équipe " + targetRoom);
+      if (targetRoom !== room) {
+        localStorage.setItem(RK, targetRoom);
+        location.hash = '#' + targetRoom;
+        location.search = ''; // Enlève le mode readonly s'il était actif
+        location.reload();
+      } else {
+        view();
+      }
+    }).catch(err => alert("Erreur Firebase : " + err.message));
+  } else {
+    S = targetData;
+    localStorage.setItem(LK, JSON.stringify(S));
+    location.reload();
+  }
+}
+
 $('#cancelImportText').onclick = () => { $('#importModal').style.display = 'none'; };
 $('#doImportText').onclick = () => {
   const text = $('#importText').value.trim();
   if (!text) { alert("Veuillez coller le contenu du fichier."); return; }
   try {
     const parsed = JSON.parse(text);
-    if (confirm("⚠️ ATTENTION : Cela va écraser toutes les données actuelles avec ce texte. Continuer ?")) {
-      $('#doImportText').textContent = "Patientez...";
-      if (SYNC && R) {
-        R.set(parsed).then(() => {
-          alert("Restauration réussie ! Le projet a été mis à jour.");
-          $('#importModal').style.display = 'none';
-          $('#doImportText').textContent = "Restaurer";
-          view();
-        }).catch(err => {
-          alert("Erreur Firebase : " + err.message);
-          $('#doImportText').textContent = "Restaurer";
-        });
-      } else {
-        S = parsed;
-        localStorage.setItem(LK, JSON.stringify(S));
-        location.reload();
-      }
-    }
+    $('#importModal').style.display = 'none';
+    processImport(parsed);
   } catch(err) {
     alert("Le texte collé n'est pas un JSON valide.");
   }
 };
 
-// --- FICHIER JSON (MÉTHODE CLASSIQUE) ---
 $('#fileIn').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -480,20 +499,7 @@ $('#fileIn').addEventListener('change', function(e) {
   reader.onload = function(event) {
     try {
       const parsed = JSON.parse(event.target.result);
-      setTimeout(() => {
-        if (confirm("⚠️ ATTENTION : Cela va écraser toutes les données actuelles de l'équipe avec ce fichier. Continuer ?")) {
-          if (SYNC && R) {
-            R.set(parsed).then(() => {
-              alert("Restauration réussie ! Le projet a été mis à jour.");
-              view(); 
-            }).catch(err => alert("Erreur Firebase : " + err.message));
-          } else {
-            S = parsed;
-            localStorage.setItem(LK, JSON.stringify(S));
-            location.reload();
-          }
-        }
-      }, 100);
+      setTimeout(() => processImport(parsed), 100);
     } catch (err) {
       alert("Erreur : le fichier sélectionné n'est pas un JSON valide.");
     }
