@@ -62,24 +62,33 @@ section.card{border:0;padding:0}.wrap{padding:0}}
 <body>
 <div class="wrap">
 <header class="top"><h1><span class="dot"></span>Régie de tournage</h1>
-<div><span class="muted" id="sync"></span> <button class="btn ghost" data-act="copy">Copier le lien</button> <button class="btn ghost" data-act="leave" id="leave" hidden>Changer d’équipe</button> <button class="btn ghost" id="theme">Thème</button></div></header>
+<div style="display:flex; gap:8px; flex-wrap:wrap;">
+  <span class="muted" id="sync"></span> 
+  <button class="btn ghost" data-act="copy">Copier le lien</button> 
+  <button class="btn ghost" data-act="leave" id="leave" hidden>Changer d’équipe</button> 
+  <button class="btn ghost" data-act="del_room" id="del_room" hidden style="color:var(--rec); border-color:var(--rec);">Supprimer</button>
+  <button class="btn ghost" data-act="export">Sauvegarder</button>
+  <button class="btn ghost" data-act="import">Restaurer</button>
+  <input type="file" id="fileIn" accept=".json" style="display:none">
+  <button class="btn ghost" id="theme">Thème</button>
+</div></header>
 <div id="ban"></div>
 <div class="hero"><small id="cdl">Chargement…</small><div id="cd">--:--:--</div><div class="bar"><div id="bar"></div></div><small id="cph"></small></div>
 <nav role="tablist" id="tabs"></nav>
 <main id="main"></main>
 </div>
 <script>
-/* ====== 1. COLLEZ ICI LA CONFIGURATION FIREBASE (voir le guide) ====== */
+/* ====== 1. CONFIGURATION FIREBASE ====== */
 const FIREBASE_CONFIG={
   apiKey: "AIzaSyCzk6k3G79WZU7tvp-RnslRfwB7hLrF_8",
   authDomain: "regie-tournage.firebaseapp.com",
-  databaseURL: "https://regie-tournage-default-rtdb.europe-west1.firebasedatabase.app/", 
+  databaseURL: "https://regie-tournage-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "regie-tournage",
   storageBucket: "regie-tournage.firebasestorage.app",
   messagingSenderId: "882883209097",
   appId: "1:882883209097:web:d27e96e6eadfa3350b6358"
 };
-/* ====================================================================== */
+/* ====================================== */
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -212,6 +221,30 @@ document.addEventListener('click',e=>{
   else if(d.act==='print'){window.print();return}
   else if(d.act==='copy'){try{navigator.clipboard.writeText(location.href);t.textContent='Lien copié'}catch(x){}setTimeout(()=>t.textContent='Copier le lien',1500);return}
   else if(d.act==='leave'){try{localStorage.removeItem(RK)}catch(x){}history.replaceState(null,'',location.pathname);location.reload();return}
+  else if(d.act==='del_room'){
+    if(confirm("⚠️ ATTENTION : Voulez-vous vraiment supprimer définitivement ce projet pour TOUTE l'équipe ? Cette action est irréversible.")){
+      if(R) R.remove().then(()=>{
+        try{localStorage.removeItem(RK)}catch(x){}
+        history.replaceState(null,'',location.pathname);
+        location.reload();
+      });
+    }
+    return;
+  }
+  else if(d.act==='export'){
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(S, null, 2));
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", "sauvegarde-" + (room || "local") + "-" + new Date().toISOString().slice(0,10) + ".json");
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+    return;
+  }
+  else if(d.act==='import'){
+    $('#fileIn').click();
+    return;
+  }
   else if(d.act==='join'||d.act==='new'){
     let c=d.act==='join'?v('rc').replace(/[^\w-]/g,''):Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>'abcdefghjkmnpqrstuvwxyz23456789'[b%31]).join('');
     if(c.length<4){alert('Le code doit faire au moins 4 caractères.');return}
@@ -248,8 +281,33 @@ document.addEventListener('focusout',()=>setTimeout(()=>{if(pending&&!typing())v
 $('#theme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark'};
 window.addEventListener('hashchange',()=>location.reload());
 
+$('#fileIn').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    try {
+      const parsed = JSON.parse(event.target.result);
+      if (confirm("⚠️ ATTENTION : Cela va écraser toutes les données actuelles de l'équipe avec ce fichier. Continuer ?")) {
+        if (SYNC && R) {
+          R.set(parsed).then(() => alert("Restauration réussie ! Le projet a été mis à jour."));
+        } else {
+          S = parsed;
+          localStorage.setItem(LK, JSON.stringify(S));
+          location.reload();
+        }
+      }
+    } catch (err) {
+      alert("Erreur : le fichier sélectionné n'est pas un JSON valide.");
+    }
+    this.value = '';
+  };
+  reader.readAsText(file);
+});
+
 function connect(){
   $('#leave').hidden=false;
+  $('#del_room').hidden=false;
   if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
   const db=firebase.database();R=db.ref('rooms/'+room);
   db.ref('.info/connected').on('value',s=>{$('#sync').textContent=s.val()?'● Synchronisé · équipe '+room:'○ Connexion…'});
