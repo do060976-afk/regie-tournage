@@ -96,7 +96,7 @@ document.head.appendChild(manifestLink);
   <button class="btn ghost" data-act="del_room" id="del_room" hidden style="color:var(--rec); border-color:var(--rec);">Supprimer</button>
   <button class="btn ghost" data-act="export">Sauvegarder</button>
   <button class="btn ghost" data-act="import">Restaurer</button>
-  <input type="file" id="fileIn" accept=".json" style="display:none">
+  <input type="file" id="fileIn" accept=".json,application/json,text/plain" style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; z-index:-1;">
   <button class="btn ghost" id="theme">Thème</button>
 </div></header>
 <div id="ban"></div>
@@ -118,14 +118,13 @@ const FIREBASE_CONFIG={
 /* ====================================== */
 
 /* ====== CODE ADMINISTRATEUR ====== */
-/* Changez "cinema" par le mot de passe de votre choix */
 const ADMIN_CODE = "cinema"; 
 /* ================================= */
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const SYNC=typeof firebase!=='undefined'&&!/COLLEZ/.test(FIREBASE_CONFIG.apiKey)&&!!FIREBASE_CONFIG.databaseURL;
-const isRO = location.search.includes('readonly'); // Mode lecture seule
+const isRO = location.search.includes('readonly'); 
 if(isRO) document.body.classList.add('readonly');
 
 const LK='regie48h_local',RK='regie48h_room';
@@ -161,7 +160,7 @@ const typing=()=>{const a=document.activeElement;return a&&a.closest&&a.closest(
 function times(){let c=t0();return(S.phases||[]).map(p=>{const s=c;c+=(+p.h||0)*36e5;return[s,c]})}
 function setIn(o,p,v){for(let i=0;i<p.length-1;i++)o=o[p[i]]=o[p[i]]||{};const k=p[p.length-1];if(v==null)delete o[k];else o[k]=v}
 function put(path,v){
-  if(isRO) return; // Sécurité lecture seule
+  if(isRO) return; 
   if(SYNC)R.child(path).set(v==null?null:v);
   else{setIn(S,path.split('/'),v);try{localStorage.setItem(LK,JSON.stringify(S))}catch(e){}}
 }
@@ -200,7 +199,6 @@ function view(){
   $('#tabs').innerHTML=tabs().map(([k,l])=>`<button role="tab" aria-selected="${k===tab}" data-tab="${k}">${l}</button>`).join('');
   const m=$('#main');
   
-  // --- ÉCRAN D'ACCUEIL SIMPLIFIÉ ---
   if(SYNC&&!room){
     $('#tabs').innerHTML='';
     m.innerHTML=`<section class="card">
@@ -318,14 +316,12 @@ document.addEventListener('click',e=>{
     return;
   }
   else if(d.act==='new'){
-    // --- SÉCURITÉ ADMINISTRATEUR ---
     const code = prompt("Code administrateur requis pour créer une nouvelle équipe :");
-    if (code === null) return; // L'utilisateur a annulé
+    if (code === null) return; 
     if (code !== ADMIN_CODE) {
       alert("Code incorrect. La création d'équipe est refusée.");
       return;
     }
-    
     let c=Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>'abcdefghjkmnpqrstuvwxyz23456789'[b%31]).join('');
     newMode=($('#rm')||{}).value||'48h';
     room=c;history.replaceState(null,'','#'+room);try{localStorage.setItem(RK,room)}catch(x){}connect();
@@ -363,6 +359,7 @@ document.addEventListener('focusout',()=>setTimeout(()=>{if(pending&&!typing())v
 $('#theme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark'};
 window.addEventListener('hashchange',()=>location.reload());
 
+// --- CORRECTION DE LA RESTAURATION MOBILE ---
 $('#fileIn').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -370,19 +367,37 @@ $('#fileIn').addEventListener('change', function(e) {
   reader.onload = function(event) {
     try {
       const parsed = JSON.parse(event.target.result);
-      if (confirm("⚠️ ATTENTION : Cela va écraser toutes les données actuelles de l'équipe avec ce fichier. Continuer ?")) {
-        if (SYNC && R) {
-          R.set(parsed).then(() => alert("Restauration réussie ! Le projet a été mis à jour."));
-        } else {
-          S = parsed;
-          localStorage.setItem(LK, JSON.stringify(S));
-          location.reload();
+      
+      // On utilise un setTimeout pour laisser le temps au navigateur mobile de fermer le sélecteur de fichier
+      setTimeout(() => {
+        if (confirm("⚠️ ATTENTION : Cela va écraser toutes les données actuelles de l'équipe avec ce fichier. Continuer ?")) {
+          if (SYNC && R) {
+            // On affiche un message d'attente
+            const btn = document.querySelector('[data-act="import"]');
+            if(btn) btn.textContent = "Patientez...";
+            
+            R.set(parsed).then(() => {
+              alert("Restauration réussie ! Le projet a été mis à jour.");
+              view(); // On rafraîchit l'écran
+            }).catch(err => {
+              alert("Erreur Firebase : " + err.message);
+            });
+          } else {
+            S = parsed;
+            localStorage.setItem(LK, JSON.stringify(S));
+            location.reload();
+          }
         }
-      }
+      }, 100);
+      
     } catch (err) {
-      alert("Erreur : le fichier sélectionné n'est pas un JSON valide.");
+      alert("Erreur : le fichier sélectionné n'est pas un JSON valide ou est corrompu.");
     }
-    this.value = '';
+    e.target.value = ''; // On réinitialise le champ correctement
+  };
+  reader.onerror = function() {
+    alert("Erreur lors de la lecture du fichier par le téléphone.");
+    e.target.value = '';
   };
   reader.readAsText(file);
 });
@@ -390,7 +405,7 @@ $('#fileIn').addEventListener('change', function(e) {
 function connect(){
   $('#leave').hidden=false;
   $('#del_room').hidden=false;
-  try{localStorage.setItem(RK, room)}catch(x){} // Mémorisation de l'équipe rejointe
+  try{localStorage.setItem(RK, room)}catch(x){} 
   if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
   const db=firebase.database();R=db.ref('rooms/'+room);
   db.ref('.info/connected').on('value',s=>{$('#sync').textContent=s.val()?'● Synchronisé · équipe '+room:'○ Connexion…'});
