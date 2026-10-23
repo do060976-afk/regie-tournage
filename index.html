@@ -131,6 +131,8 @@ body.readonly input[type="checkbox"] { display: none; }
   
   .sheet table { font-size: 0.85rem; }
 }
+textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px;width:100%;min-height:90px}
+.toast{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:14px;border-radius:6px;font-weight:600;z-index:10000;border-left:8px solid var(--tape)}
 @media print{
 :root,:root:not([data-theme="light"]),:root[data-theme="dark"]{--bg:#fff;--surface:#fff;--ink:#000;--muted:#333;--line:#999;color-scheme:light}
 header.top,.hero,nav,.noprint,.banner{display:none!important}
@@ -170,6 +172,7 @@ document.head.appendChild(manifestLink);
         <button class="btn ghost" data-act="export">Sauvegarder</button>
         <label for="fileIn" class="btn ghost">Fichier</label>
         <button class="btn ghost" data-act="paste">Coller</button>
+        <button class="btn ghost" data-act="alerts" id="alertBtn">Alertes</button>
         <button class="btn ghost" id="theme">Thème</button>
       </div>
     </details>
@@ -215,7 +218,7 @@ const ADMIN_CODE = "cinema";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const SYNC=typeof firebase!=='undefined'&&!/COLLEZ/.test(FIREBASE_CONFIG.apiKey)&&!!FIREBASE_CONFIG.databaseURL;
-const isRO = location.search.includes('readonly'); 
+const isRO = /readonly/.test(location.search+location.hash); 
 if(isRO) document.body.classList.add('readonly');
 
 const LK='regie48h_local',RK='regie48h_room';
@@ -224,7 +227,7 @@ const nextHour=()=>{const d=new Date();d.setMinutes(0,0,0);d.setHours(d.getHours
 const obj=(a,f)=>Object.fromEntries(a.map((x,i)=>['d'+i,Object.assign(f(x),{o:i})]));
 const isoD=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())};
 const ymd=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
-const DEF=(mode)=>({init:1,mode:mode||'48h',bud:0,budget:obj(['Location de matériel','Repas','Transports','Décors et accessoires','Musique et droits','Assurance'],t=>({t,est:0,real:0})),start:nextHour(),
+const DEF=(mode)=>({init:1,mode:mode||'48h',bud:0,permis:obj(['Autorisation de tournage (lieux)','Décharges de droit à l’image','Droits musicaux'],t=>({t,type:'',who:'',s:0})),budget:obj(['Location de matériel','Repas','Transports','Décors et accessoires','Musique et droits','Assurance'],t=>({t,est:0,real:0})),start:nextHour(),
 cph:obj([['Préproduction',0,13,0],['Tournage',14,18,1],['Postproduction',19,48,0],['Livraison',49,49,0]],x=>({n:x[0],from:isoD(x[1]),to:isoD(x[2]),s:x[3]})),
 phases:[{n:'Écriture',h:3},{n:'Préparation et repérages',h:3},{n:'Tournage',h:18},{n:'Montage et son',h:15},{n:'Export et dépôt',h:3},{n:'Marge de sécurité',h:6}],
 c:{genre:'',perso:'',objet:'',replique:''},
@@ -232,12 +235,57 @@ tasks:obj(['Charger les batteries et vider les cartes mémoire','Prévoir repas 
 gear:obj(['Caméra et objectifs','Micro et perche','Trépied','Lumières','Cartes mémoire','Batteries chargées','Disque SSD','Câbles et rallonges','Ordinateur de montage','Casque audio','Clap'],t=>({t,who:'',k:0})),
 timeline:{} });
 let S={},ready=false,R=null,room='',pending=false,tab='chrono',newMode='48h',curDay='';
-const TABS=[['chrono','Chrono'],['timeline','Journée'],['equipe','Équipe'],['taches','Tâches'],['scenes','Scènes'],['matos','Matériel'],['sommeil','Sommeil'],['budget','Budget'],['feuille','Feuille de service']];
+const TABS=[['chrono','Chrono'],['timeline','Journée'],['equipe','Équipe'],['taches','Tâches'],['scenes','Scènes'],['matos','Matériel'],['sommeil','Sommeil'],['budget','Budget'],['permis','Autorisations'],['rapport','Rapport'],['feuille','Feuille de service']];
 const ST=['À faire','En cours','Fait'],SS=['À tourner','En cours','Tournée'];
-const tabs=()=>S.mode==='classic'?[['chrono','Planning'],['timeline','Journée'],['equipe','Équipe'],['taches','Tâches'],['scenes','Scènes'],['matos','Matériel'],['budget','Budget'],['feuille','Feuille de service']]:TABS;
+const tabs=()=>S.mode==='classic'?[['chrono','Planning'],['timeline','Journée'],['equipe','Équipe'],['taches','Tâches'],['scenes','Scènes'],['matos','Matériel'],['budget','Budget'],['permis','Autorisations'],['rapport','Rapport'],['feuille','Feuille de service']]:TABS;
 const msD=(d,end)=>new Date(d+(end?'T23:59:59':'T00:00:00')).getTime();
 const fmtD=d=>new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
 const todayS=()=>isoD(0);
+const dayKey=()=>S.mode==='classic'?curDay:(S.start||'').slice(0,10);
+const convKey=()=>S.mode==='classic'?(curDay||'x'):'x';
+function normDay(){const sp=L('cph').find(p=>p.s)||{},days=[];
+  if(sp.from&&sp.to){for(let d=new Date(sp.from+'T12:00:00'),i=0;i<60;i++){const q=ymd(d);if(q>sp.to)break;days.push(q);d.setDate(d.getDate()+1)}}
+  if(!days.includes(curDay))curDay=days.includes(todayS())?todayS():(days[0]||'');return days}
+const WX={},WXT={},wxKey=()=>((S.c||{}).ville||'')+'|'+dayKey();
+const wmo=c=>c===0?'Ciel dégagé':c<=3?'Nuageux':c<=48?'Brouillard':c<=67?'Pluie':c<=77?'Neige':c<=82?'Averses':'Orage';
+const wxBlock=()=>`<div class="noprint"><label for="vil">Ville du tournage (météo)</label><input id="vil" data-c="ville" value="${esc((S.c||{}).ville)}"><br><br><button class="btn ghost" data-act="wx">Actualiser la météo</button></div><p id="wx"></p>`;
+async function loadWx(){
+  const out=h=>{const e=$('#wx');if(e)e.innerHTML=h};
+  const v=((S.c||{}).ville||'').trim(),day=dayKey(),key=wxKey();
+  if(!v||!day){out(v?'':'<span class="muted">Indiquez une ville pour afficher la météo.</span>');return}
+  if(WX[key]){out(WX[key]);return}
+  out('Chargement de la météo…');
+  try{
+    const g=await(await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=fr&name='+encodeURIComponent(v))).json();
+    if(!g.results){out('Ville introuvable.');return}
+    const {latitude:la,longitude:lo,name}=g.results[0];
+    const f=await(await fetch('https://api.open-meteo.com/v1/forecast?latitude='+la+'&longitude='+lo+'&timezone=auto&start_date='+day+'&end_date='+day+'&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset')).json();
+    if(!f.daily||!f.daily.time||!f.daily.time.length){out('Prévision indisponible pour cette date (limite : environ 16 jours).');return}
+    const d=f.daily,sr=d.sunrise[0],ss=d.sunset[0],hh=t=>t.slice(11,16),pl=(t,h)=>{const x=new Date(t);x.setHours(x.getHours()+h);return p2(x.getHours())+':'+p2(x.getMinutes())};
+    const txt=wmo(d.weathercode[0])+', '+Math.round(d.temperature_2m_min[0])+'° à '+Math.round(d.temperature_2m_max[0])+'°, pluie '+(d.precipitation_probability_max[0]||0)+' %. Lever '+hh(sr)+', coucher '+hh(ss)+'. Golden hour : '+hh(sr)+'–'+pl(sr,1)+' et '+pl(ss,-1)+'–'+hh(ss)+'.';
+    WXT[key]='Météo '+name+' : '+txt;WX[key]='<strong>Météo : '+esc(name)+'</strong><br>'+esc(txt);out(WX[key]);
+  }catch(e){out('Météo indisponible (hors ligne ?).')}
+}
+let alertsOn=false;try{alertsOn=localStorage.getItem('regie_alerts')==='1'}catch(e){}
+const fired=new Set(),alertLbl=()=>{const b=$('#alertBtn');if(b)b.textContent='Alertes : '+(alertsOn?'oui':'non')};
+function toast(m){const t=document.createElement('div');t.className='toast';t.setAttribute('role','alert');t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),9000)}
+function notify(m){if(navigator.vibrate)navigator.vibrate([200,100,200]);toast(m);if(window.Notification&&Notification.permission==='granted'){try{new Notification('Régie de tournage',{body:m})}catch(e){}}}
+function toggleAlerts(){alertsOn=!alertsOn;try{localStorage.setItem('regie_alerts',alertsOn?'1':'0')}catch(e){}
+  if(alertsOn&&window.Notification&&Notification.permission==='default')Notification.requestPermission();
+  if(alertsOn)toast('Alertes activées : gardez cette page ouverte pendant le tournage.');alertLbl()}
+function checkAlerts(){if(!alertsOn||!ready||S.mode==='classic')return;const n=Date.now();
+  times().forEach(([a,e],i)=>{const m=(e-n)/6e4,nm=(S.phases[i]||{}).n;if(n<a)return;
+    if(m>0&&m<=30&&!fired.has(i+'a')){fired.add(i+'a');notify(nm+' : fin dans '+Math.ceil(m)+' min')}
+    if(m<=0&&m>-2&&!fired.has(i+'b')){fired.add(i+'b');notify(nm+' est terminée : passez à la suite')}})}
+async function shareSheet(){
+  const k=dayKey(),c=S.c||{},cl=S.mode==='classic',sc=L('scenes').filter(x=>!cl||x.day===k);
+  const T=[(c.titre||'Régie de tournage')+(cl&&k?' – '+fmtD(k):''),''];
+  if(WXT[wxKey()])T.push(WXT[wxKey()],'');
+  T.push('Scènes :',...sc.map(x=>'• '+x.n+' ('+x.l+', '+(x.d||0)+' min)'),'','Convocations :',...L('team').map(p=>{const t=((S.conv||{})[p.id]||{})[convKey()];return '• '+p.n+(t?' : '+t:'')}));
+  const text=T.join('\n'),url=location.origin+location.pathname+'?readonly=1'+location.hash.split('?')[0];
+  try{if(navigator.share){await navigator.share({title:'Feuille de service',text,url});return}}catch(e){if(e&&e.name==='AbortError')return}
+  try{await navigator.clipboard.writeText(text+'\n'+url);toast('Feuille copiée : collez-la dans votre messagerie.')}catch(e){}
+}
 const cv=(p,k)=>`<td>Convoc. <input type="time" class="tm" data-edit="conv" data-id="${p.id}" data-f="${k}" value="${esc(((S.conv||{})[p.id]||{})[k])}" aria-label="Heure de convocation de ${esc(p.n)}"></td>`;
 function updBud(){const e=$('#bsum');if(!e)return;const B=L('budget'),te=B.reduce((x,y)=>x+(+y.est||0),0),tr=B.reduce((x,y)=>x+(+y.real||0),0),env=+S.bud||0,fm=n=>n.toLocaleString('fr-FR',{maximumFractionDigits:2})+' €';
   e.innerHTML='Estimé : <strong>'+fm(te)+'</strong> · Dépensé : <strong>'+fm(tr)+'</strong>'+(env?' · Reste : <strong class="'+(env-tr<0?'warn':'')+'">'+fm(env-tr)+'</strong>':'')+(env&&te>env?'<br><span class="warn">Le total estimé dépasse l’enveloppe.</span>':'')}
@@ -250,16 +298,102 @@ const hms=ms=>{const s=Math.max(0,Math.round(ms/1000));return p2(s/3600)+':'+p2(
 const typing=()=>{const a=document.activeElement;return a&&a.closest&&a.closest('#main')&&/INPUT|SELECT|TEXTAREA/.test(a.tagName)};
 function times(){let c=t0();return(S.phases||[]).map(p=>{const s=c;c+=(+p.h||0)*36e5;return[s,c]})}
 function setIn(o,p,v){for(let i=0;i<p.length-1;i++)o=o[p[i]]=o[p[i]]||{};const k=p[p.length-1];if(v==null)delete o[k];else o[k]=v}
-function put(path,v){
-  if(isRO) return; 
-  if(SYNC)R.child(path).set(v==null?null:v);
-  else{setIn(S,path.split('/'),v);try{localStorage.setItem(LK,JSON.stringify(S))}catch(e){}}
+
+/* ============================================================
+   FIX 1 + FIX 3 : écriture locale optimiste + debounce Firebase
+   - put() met TOUJOURS à jour S + localStorage immédiatement.
+   - L'écriture Firebase est retardée (sauf clic = immédiat).
+   - Les écritures en attente sont sauvées dans localStorage
+     et rejouées au chargement, pour ne rien perdre au reload.
+   ============================================================ */
+const DEBOUNCE_MS = 350;
+const pendingWrites = {}; // path -> {v, timer}
+
+function savePending(){
+  if(!SYNC || !room) return;
+  const p = {};
+  Object.entries(pendingWrites).forEach(([path,w])=>{p[path]=w.v});
+  try{
+    const key='regie_pending_'+room;
+    if(Object.keys(p).length) localStorage.setItem(key, JSON.stringify(p));
+    else localStorage.removeItem(key);
+  }catch(e){}
 }
+
+function loadPending(){
+  if(!SYNC || !room) return;
+  try{
+    const p = JSON.parse(localStorage.getItem('regie_pending_'+room) || '{}');
+    Object.entries(p).forEach(([path,v])=>{
+      pendingWrites[path] = {
+        v: v,
+        timer: setTimeout(()=>{
+          const w = pendingWrites[path];
+          if(!w) return;
+          delete pendingWrites[path];
+          savePending();
+          if(R) R.child(path).set(w.v==null?null:w.v).catch(e=>console.warn('FB write failed',path,e));
+        }, DEBOUNCE_MS)
+      };
+    });
+  }catch(e){}
+}
+
+function mergePending(serverVal){
+  const v = serverVal || {};
+  Object.entries(pendingWrites).forEach(([path,w])=>{
+    setIn(v, path.split('/'), w.v);
+  });
+  return v;
+}
+
+function flushPending(){
+  if(!SYNC || !R) return;
+  Object.keys(pendingWrites).forEach(path=>{
+    const w = pendingWrites[path];
+    clearTimeout(w.timer);
+    R.child(path).set(w.v==null?null:w.v).catch(e=>console.warn('FB write failed',path,e));
+    delete pendingWrites[path];
+  });
+  savePending();
+}
+
+function put(path, v, immediate){
+  if(isRO) return;
+  // 1. Mise à jour locale optimiste (toujours, dans les deux modes)
+  setIn(S, path.split('/'), v);
+  const cacheKey = SYNC ? 'regie_cache_'+room : LK;
+  try{ localStorage.setItem(cacheKey, JSON.stringify(S)) }catch(e){}
+  // 2. Écriture Firebase
+  if(!SYNC || !R) return;
+  if(pendingWrites[path]){
+    clearTimeout(pendingWrites[path].timer);
+    delete pendingWrites[path];
+  }
+  if(immediate){
+    R.child(path).set(v==null?null:v).catch(e=>console.warn('FB write failed',path,e));
+    savePending();
+    return;
+  }
+  pendingWrites[path] = {
+    v: v,
+    timer: setTimeout(()=>{
+      const w = pendingWrites[path];
+      if(!w) return;
+      delete pendingWrites[path];
+      savePending();
+      R.child(path).set(w.v==null?null:w.v).catch(e=>console.warn('FB write failed',path,e));
+    }, DEBOUNCE_MS)
+  };
+  savePending();
+}
+/* ============================================================ */
 
 function tickC(){
   const n=Date.now(),sp=L('cph').find(p=>p.s);let ph='';
   if(sp&&sp.from&&sp.to){const a=msD(sp.from),b=msD(sp.to,1),N=Math.round((b-a)/864e5);
-    if(n<a){$('#cdl').textContent='Début du tournage dans';$('#cd').textContent=Math.ceil((a-n)/864e5)+' j';$('#bar').style.width='0'}
+    if(isNaN(a)||isNaN(b)){$('#cdl').textContent='Dates invalides';$('#cd').textContent='--'}
+    else if(n<a){$('#cdl').textContent='Début du tournage dans';$('#cd').textContent=Math.ceil((a-n)/864e5)+' j';$('#bar').style.width='0'}
     else if(n<=b){$('#cdl').textContent='Tournage en cours';$('#cd').textContent='Jour '+(Math.floor((n-a)/864e5)+1)+' / '+N;$('#bar').style.width=((n-a)/(b-a)*100)+'%'}
     else{$('#cdl').textContent='Tournage terminé';$('#cd').textContent='✓';$('#bar').style.width='100%'}}
   else{$('#cdl').textContent='Ajoutez les dates du tournage';$('#cd').textContent='--'}
@@ -323,6 +457,15 @@ function view(){
     <section class="card"><h2>Contraintes imposées</h2><div class="grid">${[['genre','Genre'],['perso','Personnage'],['objet','Accessoire'],['replique','Réplique']].map(([k,l])=>`<div><label for="c-${k}">${l}</label><input id="c-${k}" data-c="${k}" value="${esc((S.c||{})[k])}"></div>`).join('')}</div></section>
     <section class="card"><h2>Répartition des 48 heures</h2>${(S.phases||[]).map((p,i)=>`<div class="phase"><strong>${esc(p.n)}</strong><input type="number" min="0" step="0.5" value="${p.h}" data-ph="${i}" aria-label="Durée en heures : ${esc(p.n)}"><small data-pt></small><small>heures</small></div>`).join('')}<p id="tot"></p></section>`;
   }
+  if(tab==='permis'){const P=L('permis'),PS=['À obtenir','Demandée','Obtenue'];
+    m.innerHTML=`<section class="card"><h2>Autorisations et droits (${P.filter(x=>x.s===2).length}/${P.length} obtenus)</h2>${P.map((x,i)=>`<div class="row ${i?'':'first'}"><div class="grow ${x.s===2?'done':''}">${esc(x.t)}<br><span class="muted">${esc(x.type||'')}${x.who?' · '+esc(x.who):''}</span></div><button class="st s${x.s}" data-st="permis" data-id="${x.id}">${PS[x.s]}</button>${delBtn('permis',x.id)}</div>`).join('')||'<p class="muted">Aucune autorisation suivie.</p>'}${addRow('permis','Autorisation ou droit','Type (lieu, image, musique…)','Responsable').replace(' list="who"','')}</section>`}
+  if(tab==='rapport'){const cl=S.mode==='classic',days=cl?normDay():[],k=dayKey()||'x',R0=((S.rapport||{})[k])||{},sc=L('scenes').filter(x=>!cl||x.day===k),dn=sc.filter(x=>x.s===2),sum=a=>a.reduce((x,y)=>x+(+y.d||0),0);
+    const ed=(f,t)=>`<input type="${t}" data-edit="rapport" data-id="${k}" data-f="${f}" value="${esc(R0[f])}">`,ta=f=>`<textarea data-edit="rapport" data-id="${k}" data-f="${f}">${esc(R0[f])}</textarea>`;
+    m.innerHTML=`<section class="card sheet"><div class="noprint">${cl?`<label for="fd">Jour de tournage</label><select id="fd">${days.map(d=>`<option value="${d}"${d===curDay?' selected':''}>${fmtD(d)}</option>`).join('')}</select><br><br>`:''}<button class="btn" data-act="print">Imprimer le rapport</button></div><h2>Rapport de tournage${cl&&k!=='x'?' : '+fmtD(k):''}</h2>
+    <p>Scènes tournées : <strong>${dn.length}/${sc.length}</strong> · ${sum(dn)} min tournées sur ${sum(sc)} min prévues</p>
+    <div class="grid"><div><label>Début de tournage</label>${ed('debut','time')}</div><div><label>Fin de tournage</label>${ed('fin','time')}</div><div><label>Rushes (Go ou cartes)</label>${ed('rushes','text')}</div></div>
+    <h3>Incidents et retards</h3>${ta('incidents')}<h3>Notes</h3>${ta('notes')}
+    <h3>Scènes</h3><table>${sc.map(x=>`<tr><td>${esc(x.n)}</td><td>${esc(x.l)}</td><td>${x.d||0} min</td><td>${SS[x.s]}</td></tr>`).join('')||'<tr><td>Aucune scène.</td></tr>'}</table></section>`}
   if(tab==='timeline'){
     const tl=L('timeline').sort((a,b)=>(a.start||'').localeCompare(b.start||''));
     m.innerHTML=`<section class="card"><h2>Planning de la journée</h2>${tl.map((x,i)=>`<div class="row ${i?'':'first'}"><div class="grow"><strong>${x.start||'??:??'} - ${x.end||'??:??'}</strong> · ${esc(x.desc)}</div>${delBtn('timeline',x.id)}</div>`).join('')||'<p class="muted">Aucun créneau planifié. Ajoutez vos heures (ex: 08:00 à 10:30).</p>'}${addRow('timeline','Début (ex: 08:00)','Fin (ex: 10:30)','Activité','type="time"','type="time"')}</section>`;
@@ -332,7 +475,7 @@ function view(){
   if(tab==='scenes'){
     const s=L('scenes').sort((a,b)=>(a.day||'9').localeCompare(b.day||'9')||(a.o-b.o)),mn=s.reduce((x,y)=>x+(+y.d||0),0);
     m.innerHTML=`<section class="card"><h2>Plan de tournage</h2>${s.map((x,i)=>{
-      const loc = x.l ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(x.l)}" target="_blank" class="map-link">${esc(x.l)}</a>` : 'Lieu non défini';
+      const loc = x.l ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(x.l)}" target="_blank" rel="noopener noreferrer" class="map-link">${esc(x.l)}</a>` : 'Lieu non défini';
       return `<div class="row ${i?'':'first'}"><div class="grow ${x.s===2?'done':''}"><strong>${esc(x.n)}</strong><br><span class="muted">${x.day?fmtD(x.day)+' · ':''}${loc} · ${x.d||0} min</span></div><button class="st s${x.s}" data-st="scenes" data-id="${x.id}">${SS[x.s]}</button>${delBtn('scenes',x.id)}</div>`
     }).join('')||'<p class="muted">Listez vos scènes avec lieu et durée de tournage estimée.</p>'}<p class="muted">Durée estimée : ${Math.floor(mn/60)} h ${mn%60} min. ${S.mode==='classic'?'':'Tournage prévu : '+(S.phases&&S.phases[2]?S.phases[2].h:0)+' h.'}</p>${addRow('scenes','Scène (ex. 3 – Le bureau)','Lieu','Minutes','','type="number" min="0"').replace(' list="who"','').replace('<button class="btn" data-add',S.mode==='classic'?'<input id="a4" type="date" aria-label="Jour de tournage"><button class="btn" data-add':'<button class="btn" data-add')}</section>`}
   if(tab==='matos'){const g=L('gear');m.innerHTML=dl+`<section class="card"><h2>Matériel (${g.filter(x=>x.k).length}/${g.length} prêt)</h2>${g.map((x,i)=>`<div class="row ${i?'':'first'}"><input type="checkbox" data-chk="gear" data-id="${x.id}" ${x.k?'checked':''} aria-label="${esc(x.t)} prêt"><div class="grow ${x.k?'done':''}">${esc(x.t)}</div>${edit('gear',x.id,'who',x.who,'Qui l’apporte ?')}${delBtn('gear',x.id)}</div>`).join('')}${addRow('gear','Nouvel élément','Qui l’apporte ?')}</section>`}
@@ -347,23 +490,25 @@ function view(){
     if(sp.from&&sp.to){for(let d=new Date(sp.from+'T12:00:00'),i=0;i<60;i++){const q=ymd(d);if(q>sp.to)break;days.push(q);d.setDate(d.getDate()+1)}}
     if(!days.includes(curDay))curDay=days.includes(todayS())?todayS():(days[0]||'');
     const sc=L('scenes').filter(x=>x.day===curDay),c=S.c||{};
-    m.innerHTML=`<section class="card sheet"><div class="noprint"><label for="fd">Jour de tournage</label><select id="fd">${days.map(d=>`<option value="${d}"${d===curDay?' selected':''}>${fmtD(d)}</option>`).join('')}</select><br><br><button class="btn" data-act="print">Imprimer la feuille</button></div><h2>Feuille de service${curDay?' : '+fmtD(curDay):''}</h2>
+    m.innerHTML=`<section class="card sheet"><div class="noprint"><label for="fd">Jour de tournage</label><select id="fd">${days.map(d=>`<option value="${d}"${d===curDay?' selected':''}>${fmtD(d)}</option>`).join('')}</select><br><br><button class="btn" data-act="print">Imprimer la feuille</button> <button class="btn ghost" data-act="share">Partager</button></div><h2>Feuille de service${curDay?' : '+fmtD(curDay):''}</h2>
     <p>${esc(c.titre)||'Projet sans titre'}${c.genre?' · '+esc(c.genre):''}</p>
     <h3>Scènes du jour</h3><table>${sc.map(x=>`<tr><td>${esc(x.n)}</td><td>${esc(x.l)}</td><td>${x.d||0} min</td><td>${SS[x.s]}</td></tr>`).join('')||'<tr><td>Aucune scène planifiée ce jour.</td></tr>'}</table>
+    ${wxBlock()}
     <h3>Équipe</h3><table>${L('team').map(p=>`<tr><td>${esc(p.n)}</td><td>${esc(p.r)}</td><td>${esc(p.tel)}</td>${cv(p,curDay||'x')}</tr>`).join('')||'<tr><td>—</td></tr>'}</table>
     <h3>Matériel restant à rassembler</h3><p>${L('gear').filter(x=>!x.k).map(x=>esc(x.t)+(x.who?' ('+esc(x.who)+')':'')).join(', ')||'Tout est prêt.'}</p>
     <h3>Tâches en attente</h3><p>${L('tasks').filter(x=>x.s!==2).map(x=>esc(x.t)+(x.who?' ('+esc(x.who)+')':'')).join(', ')||'Rien en attente.'}</p></section>`}
   else if(tab==='feuille'){
     const T=times(),a=t0(),c=S.c||{};
-    m.innerHTML=`<section class="card sheet"><div class="noprint"><button class="btn" data-act="print">Imprimer la feuille</button></div><h2>Feuille de service</h2>
+    m.innerHTML=`<section class="card sheet"><div class="noprint"><button class="btn" data-act="print">Imprimer la feuille</button> <button class="btn ghost" data-act="share">Partager</button></div><h2>Feuille de service</h2>
     <p>Départ : <strong>${isNaN(a)?'—':fmt(a)}</strong> · Rendu : <strong>${isNaN(a)?'—':fmt(a+48*36e5)}</strong></p>
     <h3>Contraintes</h3><p>Genre : ${esc(c.genre)||'—'}<br>Personnage : ${esc(c.perso)||'—'}<br>Accessoire : ${esc(c.objet)||'—'}<br>Réplique : ${esc(c.replique)||'—'}</p>
     <h3>Planning</h3><table>${(S.phases||[]).map((p,i)=>`<tr><td>${esc(p.n)}</td><td>${isNaN(T[i][0])?'':fmt(T[i][0])+' → '+fmt(T[i][1])}</td></tr>`).join('')}</table>
+    ${wxBlock()}
     <h3>Équipe</h3><table>${L('team').map(p=>`<tr><td>${esc(p.n)}</td><td>${esc(p.r)}</td><td>${esc(p.tel)}</td>${cv(p,'x')}</tr>`).join('')||'<tr><td>—</td></tr>'}</table>
     <h3>Scènes</h3><table>${L('scenes').map(x=>`<tr><td>${esc(x.n)}</td><td>${esc(x.l)}</td><td>${x.d||0} min</td><td>${SS[x.s]}</td></tr>`).join('')||'<tr><td>—</td></tr>'}</table>
     <h3>Repos</h3><table>${L('sleep').sort((x,y)=>new Date(x.at)-new Date(y.at)).map(x=>`<tr><td>${esc(x.who)}</td><td>${fmt(new Date(x.at).getTime())}</td><td>${x.h} h</td></tr>`).join('')||'<tr><td>—</td></tr>'}</table>
     <h3>Matériel restant à rassembler</h3><p>${L('gear').filter(x=>!x.k).map(x=>esc(x.t)+(x.who?' ('+esc(x.who)+')':'')).join(', ')||'Tout est prêt.'}</p></section>`}
-  tick();updBud();
+  tick();updBud();if(tab==='feuille')loadWx();
 }
 
 document.querySelector('.tools-content').addEventListener('click', (e) => {
@@ -377,10 +522,13 @@ document.addEventListener('click',e=>{
   const v=id=>(($('#'+id)||{}).value||'').trim(),d=t.dataset;
   if(d.tab){tab=d.tab}
   else if(d.act==='print'){window.print();return}
-  else if(d.act==='copy'){try{navigator.clipboard.writeText(location.href);t.textContent='Lien copié'}catch(x){}setTimeout(()=>t.textContent='Lien équipe',1500);return}
+  else if(d.act==='copy'){try{navigator.clipboard.writeText(location.origin+location.pathname+location.hash.split('?')[0]);t.textContent='Lien copié'}catch(x){}setTimeout(()=>t.textContent='Lien équipe',1500);return}
+  else if(d.act==='alerts'){toggleAlerts();return}
+  else if(d.act==='share'){shareSheet();return}
+  else if(d.act==='wx'){delete WX[wxKey()];loadWx();return}
   else if(d.act==='copy_ro'){
     try{
-      const url = location.origin + location.pathname + location.hash + (location.hash.includes('?')?'&':'?') + 'readonly=1';
+      const url = location.origin + location.pathname + '?readonly=1' + location.hash.split('?')[0];
       navigator.clipboard.writeText(url);
       t.textContent='Lien copié';
     }catch(x){}
@@ -432,21 +580,23 @@ document.addEventListener('click',e=>{
     room=c;history.replaceState(null,'','#'+room);try{localStorage.setItem(RK,room)}catch(x){}connect();
   }
   else if(d.add){const k=d.add,a1=v('a1'),a2=v('a2'),a3=v('a3');if(!a1&&k!=='timeline')return;const id=uid(),o=Date.now();
-    if(k==='team')put('team/'+id,{n:a1,r:a2,tel:a3,o});
-    if(k==='tasks')put('tasks/'+id,{t:a1,who:a2,s:0,o});
-    if(k==='scenes')put('scenes/'+id,{n:a1,l:a2,d:+a3||0,s:0,day:v('a4'),o});
-    if(k==='cph'){if(!a2||!a3){alert('Indiquez les dates de début et de fin.');return}put('cph/'+id,{n:a1,from:a2,to:a3,s:0,o})}
-    if(k==='budget')put('budget/'+id,{t:a1,est:+a2||0,real:+a3||0,o});
-    if(k==='gear')put('gear/'+id,{t:a1,who:a2,k:0,o});
-    if(k==='sleep'){if(!a2||!(+a3>0)){alert('Indiquez un début et une durée en heures.');return}put('sleep/'+id,{who:a1,at:a2,h:+a3,o})}
-    if(k==='timeline')put('timeline/'+id,{start:a1,end:a2,desc:a3,o});
+    if(k==='team')put('team/'+id,{n:a1,r:a2,tel:a3,o},true);
+    if(k==='tasks')put('tasks/'+id,{t:a1,who:a2,s:0,o},true);
+    if(k==='scenes')put('scenes/'+id,{n:a1,l:a2,d:+a3||0,s:0,day:v('a4'),o},true);
+    if(k==='cph'){if(!a2||!a3){alert('Indiquez les dates de début et de fin.');return}put('cph/'+id,{n:a1,from:a2,to:a3,s:0,o},true)}
+    if(k==='budget')put('budget/'+id,{t:a1,est:+a2||0,real:+a3||0,o},true);
+    if(k==='permis')put('permis/'+id,{t:a1,type:a2,who:a3,s:0,o},true);
+    if(k==='gear')put('gear/'+id,{t:a1,who:a2,k:0,o},true);
+    if(k==='sleep'){if(!a2||!(+a3>0)){alert('Indiquez un début et une durée en heures.');return}put('sleep/'+id,{who:a1,at:a2,h:+a3,o},true)}
+    if(k==='timeline')put('timeline/'+id,{start:a1,end:a2,desc:a3,o},true);
   }
-  else if(d.del){put(d.del+'/'+d.id,null)}
-  else if(d.st){const o=(S[d.st]||{})[d.id];if(o)put(d.st+'/'+d.id+'/s',((o.s||0)+1)%3)}
+  else if(d.del){put(d.del+'/'+d.id,null,true)}
+  else if(d.st){const o=(S[d.st]||{})[d.id];if(o)put(d.st+'/'+d.id+'/s',((o.s||0)+1)%3,true)}
   view();
 });
 document.addEventListener('input',e=>{
   const t=e.target;
+  // Toutes ces écritures sont debouncées : ce sont des frappes clavier.
   if(t.dataset.c)put('c/'+t.dataset.c,t.value);
   else if(t.dataset.ph!==undefined){put('phases/'+t.dataset.ph+'/h',+t.value||0);tick()}
   else if(t.dataset.b!==undefined){put('bud',+t.value||0);updBud()}
@@ -454,15 +604,23 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{
   const t=e.target,d=t.dataset;
-  if(t.id==='md'){put('mode',t.value);if(t.value==='classic'&&!S.cph)put('cph',DEF('classic').cph);view()}
+  // Les "change" ne firent qu'une fois par interaction : on peut écrire immédiatement.
+  if(t.id==='md'){put('mode',t.value,true);if(t.value==='classic'&&!S.cph)put('cph',DEF('classic').cph,true);view()}
+  else if(t.id==='vil'){loadWx()}
   else if(t.id==='fd'){curDay=t.value;view()}
-  else if(t.id==='st'){put('start',t.value);tick()}
-  else if(d.chk){put(d.chk+'/'+d.id+'/k',t.checked?1:0);view()}
-  else if(d.edit&&d.num===undefined)put(d.edit+'/'+d.id+'/'+d.f,t.value.trim());
+  else if(t.id==='st'){put('start',t.value,true);tick()}
+  else if(d.chk){put(d.chk+'/'+d.id+'/k',t.checked?1:0,true);view()}
+  else if(d.edit&&d.num===undefined)put(d.edit+'/'+d.id+'/'+d.f,t.value.trim(),true);
 });
 document.addEventListener('focusout',()=>setTimeout(()=>{if(pending&&!typing())view()},400));
 $('#theme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark'};
 window.addEventListener('hashchange',()=>location.reload());
+
+// Envoie immédiatement les écritures en attente si l'utilisateur
+// met l'onglet en arrière-plan, change de page ou ferme l'app.
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushPending()});
+window.addEventListener('pagehide',flushPending);
+window.addEventListener('beforeunload',flushPending);
 
 function processImport(parsed) {
   let targetRoom = room;
@@ -538,15 +696,25 @@ function connect(){
   try{localStorage.setItem(RK, room)}catch(x){} 
   if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
   const db=firebase.database();R=db.ref('rooms/'+room);
-  db.ref('.info/connected').on('value',s=>{$('#sync').textContent=s.val()?'● Synchronisé · équipe '+room:'○ Connexion…'});
-  ready=false;view();
-  R.on('value',s=>{const v=s.val();if(!v){if(!isRO)R.update(DEF(newMode));return}
-    S=v;ready=true;if(typing()){pending=true;tick()}else view()},
-    ()=>{$('#sync').textContent='Accès refusé : vérifiez les règles Firebase'});
+  db.ref('.info/connected').on('value',s=>{$('#sync').textContent=s.val()?'● Synchronisé · équipe '+room:'○ Hors ligne : les modifications partiront au retour du réseau'});
+  ready=false;try{const c=JSON.parse(localStorage.getItem('regie_cache_'+room));if(c&&c.init){S=c;ready=true}}catch(x){}
+  // Recharge les écritures en attente depuis la session précédente (fix 3)
+  loadPending();
+  view();
+  R.on('value',s=>{
+    const v=s.val();
+    if(!v){if(!isRO)R.update(DEF(newMode));return}
+    // On superpose les écritures locales non encore synchronisées (fix 3)
+    S = mergePending(v);
+    ready=true;
+    try{localStorage.setItem('regie_cache_'+room, JSON.stringify(S))}catch(x){}
+    if(typing()){pending=true;tick()}else view()
+  },
+  ()=>{$('#sync').textContent='Accès refusé : vérifiez les règles Firebase'});
 }
 
 if(SYNC){
-  try{room=(location.hash||'').slice(1).replace(/[^\w-]/g,'')||localStorage.getItem(RK)||''}catch(e){}
+  try{room=(location.hash||'').slice(1).split('?')[0].replace(/[^\w-]/g,'')||localStorage.getItem(RK)||''}catch(e){}
   if(room){history.replaceState(null,'','#'+room);connect()}else view();
 }else{
   try{S=JSON.parse(localStorage.getItem(LK))}catch(e){}
@@ -555,7 +723,9 @@ if(SYNC){
   $('#ban').innerHTML='<div class="banner">Mode local : les données restent sur cet appareil. Ajoutez la configuration Firebase pour synchroniser l’équipe.</div>';
   view();
 }
-setInterval(tick,1000);
+alertLbl();
+if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+setInterval(()=>{tick();checkAlerts()},1000);
 </script>
 </body>
 </html>
