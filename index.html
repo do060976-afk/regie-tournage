@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Régie de tournage</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+:root{--bg:#e8edf1;--surface:#f7f9fa;--ink:#14213d;--muted:#5b6678;--line:#c4ccd6;--rec:#c8202f;--tape:#f2c14e;--ok:#2d7a4f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101826;--surface:#182234;--ink:#e8edf5;--muted:#9aa6ba;--line:#2e3b52;--rec:#ff5a67;--ok:#5ec48a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#101826;--surface:#182234;--ink:#e8edf5;--muted:#9aa6ba;--line:#2e3b52;--rec:#ff5a67;--ok:#5ec48a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+.wrap{max-width:860px;margin:0 auto;padding:16px}
+header.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+h1{font-size:1.1rem;font-weight:800;margin:0;display:flex;align-items:center;gap:8px}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--rec);animation:blink 1.4s infinite}
+@keyframes blink{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.dot{animation:none}}
+.hero{margin:14px 0 8px;padding:20px;background:var(--ink);color:var(--bg);border-radius:6px;border-bottom:8px solid var(--tape)}
+.hero small{opacity:.8}
+#cd{font-size:clamp(2.4rem,11vw,4.6rem);font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05}
+.bar{height:10px;background:rgba(128,128,128,.35);border-radius:5px;margin-top:12px;overflow:hidden}
+#bar{height:100%;background:var(--rec);width:0}
+nav{display:flex;gap:4px;overflow-x:auto;margin:14px 0;border-bottom:2px solid var(--line)}
+nav button{flex:0 0 auto;border:0;background:none;color:var(--muted);font:inherit;font-weight:600;padding:10px 14px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+nav button[aria-selected=true]{color:var(--ink);border-color:var(--rec)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--tape);outline-offset:1px}
+section.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:14px}
+h2{font-size:1.05rem;margin:0 0 10px}
+h3{font-size:.95rem;margin:14px 0 4px}
+label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:3px}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px;width:100%;min-width:0}
+input[type=checkbox]{width:22px;height:22px;flex:none}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.row{display:flex;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.row.first{border-top:0}
+.grow{flex:1 1 140px;min-width:0}
+.who{flex:0 1 150px}.dt{flex:0 1 150px}.num{flex:0 0 110px}.tm{width:120px}
+.btn{font:inherit;font-weight:600;border:0;border-radius:4px;padding:8px 14px;background:var(--ink);color:var(--bg);cursor:pointer}
+.btn.ghost{background:none;color:var(--muted);border:1px solid var(--line);padding:6px 10px}
+.phase{display:grid;grid-template-columns:1fr 78px;gap:4px 10px;padding:10px 12px;border-left:6px solid var(--line);margin-bottom:6px;background:var(--bg);border-radius:0 4px 4px 0}
+.phase.now{border-color:var(--rec);background:color-mix(in srgb,var(--tape) 28%,var(--bg))}
+.phase.past{opacity:.55;border-color:var(--ok)}
+.phase small{color:var(--muted)}
+.st{font-weight:600;border-radius:12px;padding:4px 12px;border:2px solid var(--line);background:none;color:var(--ink);cursor:pointer;font-family:inherit}
+.st.s1{border-color:var(--tape);background:var(--tape);color:#14213d}.st.s2{border-color:var(--ok);background:var(--ok);color:#fff}
+.done{text-decoration:line-through;color:var(--muted)}
+.warn{color:var(--rec);font-weight:600}
+.muted{color:var(--muted);font-size:.9rem}
+.add{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.add input{flex:1 1 120px}
+.banner{background:var(--tape);color:#14213d;padding:10px 14px;border-radius:6px;margin-top:12px;font-weight:600}
+.sheet table{width:100%;border-collapse:collapse}.sheet td,.sheet th{text-align:left;padding:4px 8px 4px 0;border-bottom:1px solid var(--line);vertical-align:top}
+@media print{
+:root,:root:not([data-theme="light"]),:root[data-theme="dark"]{--bg:#fff;--surface:#fff;--ink:#000;--muted:#333;--line:#999;color-scheme:light}
+header.top,.hero,nav,.noprint,.banner{display:none!important}
+section.card{border:0;padding:0}.wrap{padding:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top"><h1><span class="dot"></span>Régie de tournage</h1>
+<div><span class="muted" id="sync"></span> <button class="btn ghost" data-act="copy">Copier le lien</button> <button class="btn ghost" data-act="leave" id="leave" hidden>Changer d’équipe</button> <button class="btn ghost" id="theme">Thème</button></div></header>
+<div id="ban"></div>
+<div class="hero"><small id="cdl">Chargement…</small><div id="cd">--:--:--</div><div class="bar"><div id="bar"></div></div><small id="cph"></small></div>
+<nav role="tablist" id="tabs"></nav>
+<main id="main"></main>
+</div>
+<script>
+/* ====== 1. COLLEZ ICI LA CONFIGURATION FIREBASE (voir le guide) ====== */
+const FIREBASE_CONFIG={apiKey:"COLLEZ_ICI",authDomain:"",databaseURL:"",projectId:"",appId:""};
+/* ====================================================================== */
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const SYNC=typeof firebase!=='undefined'&&!/COLLEZ/.test(FIREBASE_CONFIG.apiKey)&&!!FIREBASE_CONFIG.databaseURL;
+const LK='regie48h_local',RK='regie48h_room';
+const p2=n=>String(Math.floor(n)).padStart(2,'0');
+const nextHour=()=>{const d=new Date();d.setMinutes(0,0,0);d.setHours(d.getHours()+1);return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())+'T'+p2(d.getHours())+':00'};
+const obj=(a,f)=>Object.fromEntries(a.map((x,i)=>['d'+i,Object.assign(f(x),{o:i})]));
+const isoD=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())};
+const ymd=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+const DEF=(mode)=>({init:1,mode:mode||'48h',bud:0,budget:obj(['Location de matériel','Repas','Transports','Décors et accessoires','Musique et droits','Assurance'],t=>({t,est:0,real:0})),start:nextHour(),
+cph:obj([['Préproduction',0,13,0],['Tournage',14,18,1],['Postproduction',19,48,0],['Livraison',49,49,0]],x=>({n:x[0],from:isoD(x[1]),to:isoD(x[2]),s:x[3]})),
+phases:[{n:'Écriture',h:3},{n:'Préparation et repérages',h:3},{n:'Tournage',h:18},{n:'Montage et son',h:15},{n:'Export et dépôt',h:3},{n:'Marge de sécurité',h:6}],
+c:{genre:'',perso:'',objet:'',replique:''},
+tasks:obj(['Charger les batteries et vider les cartes mémoire','Prévoir repas et eau pour toute l’équipe','Obtenir les autorisations de tournage','Tester l’export final bien avant la deadline'],t=>({t,who:'',s:0})),
+gear:obj(['Caméra et objectifs','Micro et perche','Trépied','Lumières','Cartes mémoire','Batteries chargées','Disque SSD','Câbles et rallonges','Ordinateur de montage','Casque audio','Clap'],t=>({t,who:'',k:0}))});
+let S={},ready=false,R=null,room='',pending=false,tab='chrono',newMode='48h',curDay='';
+const TABS=[['chrono','Chrono'],['equipe','Équipe'],['taches','Tâches'],['scenes','Scènes'],['matos','Matériel'],['sommeil','Sommeil'],['budget','Budget'],['feuille','Feuille de service']];
+const ST=['À faire','En cours','Fait'],SS=['À tourner','En cours','Tournée'];
+const tabs=()=>S.mode==='classic'?[['chrono','Planning'],['equipe','Équipe'],['taches','Tâches'],['scenes','Scènes'],['matos','Matériel'],['budget','Budget'],['feuille','Feuille de service']]:TABS;
+const msD=(d,end)=>new Date(d+(end?'T23:59:59':'T00:00:00')).getTime();
+const fmtD=d=>new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+const todayS=()=>isoD(0);
+const cv=(p,k)=>`<td>Convoc. <input type="time" class="tm" data-edit="conv" data-id="${p.id}" data-f="${k}" value="${esc(((S.conv||{})[p.id]||{})[k])}" aria-label="Heure de convocation de ${esc(p.n)}"></td>`;
+function updBud(){const e=$('#bsum');if(!e)return;const B=L('budget'),te=B.reduce((x,y)=>x+(+y.est||0),0),tr=B.reduce((x,y)=>x+(+y.real||0),0),env=+S.bud||0,fm=n=>n.toLocaleString('fr-FR',{maximumFractionDigits:2})+' €';
+  e.innerHTML='Estimé : <strong>'+fm(te)+'</strong> · Dépensé : <strong>'+fm(tr)+'</strong>'+(env?' · Reste : <strong class="'+(env-tr<0?'warn':'')+'">'+fm(env-tr)+'</strong>':'')+(env&&te>env?'<br><span class="warn">Le total estimé dépasse l’enveloppe.</span>':'')}
+const modeSel=()=>`<section class="card"><h2>Type de projet</h2><label for="md">Mode</label><select id="md"><option value="48h"${S.mode!=='classic'?' selected':''}>Concours 48 h</option><option value="classic"${S.mode==='classic'?' selected':''}>Tournage classique</option></select></section>`;
+const L=k=>Object.entries(S[k]||{}).map(([id,v])=>Object.assign({},v,{id})).sort((a,b)=>(a.o||0)-(b.o||0));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const t0=()=>new Date(S.start).getTime();
+const fmt=ts=>new Date(ts).toLocaleString('fr-FR',{weekday:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+const hms=ms=>{const s=Math.max(0,Math.round(ms/1000));return p2(s/3600)+':'+p2(s%3600/60)+':'+p2(s%60)};
+const typing=()=>{const a=document.activeElement;return a&&a.closest&&a.closest('#main')&&/INPUT|SELECT/.test(a.tagName)};
+function times(){let c=t0();return(S.phases||[]).map(p=>{const s=c;c+=(+p.h||0)*36e5;return[s,c]})}
+function setIn(o,p,v){for(let i=0;i<p.length-1;i++)o=o[p[i]]=o[p[i]]||{};const k=p[p.length-1];if(v==null)delete o[k];else o[k]=v}
+function put(path,v){
+  if(SYNC)R.child(path).set(v==null?null:v);
+  else{setIn(S,path.split('/'),v);try{localStorage.setItem(LK,JSON.stringify(S))}catch(e){}}
+}
+
+function tickC(){
+  const n=Date.now(),sp=L('cph').find(p=>p.s);let ph='';
+  if(sp&&sp.from&&sp.to){const a=msD(sp.from),b=msD(sp.to,1),N=Math.round((b-a)/864e5);
+    if(n<a){$('#cdl').textContent='Début du tournage dans';$('#cd').textContent=Math.ceil((a-n)/864e5)+' j';$('#bar').style.width='0'}
+    else if(n<=b){$('#cdl').textContent='Tournage en cours';$('#cd').textContent='Jour '+(Math.floor((n-a)/864e5)+1)+' / '+N;$('#bar').style.width=((n-a)/(b-a)*100)+'%'}
+    else{$('#cdl').textContent='Tournage terminé';$('#cd').textContent='✓';$('#bar').style.width='100%'}}
+  else{$('#cdl').textContent='Ajoutez les dates du tournage';$('#cd').textContent='--'}
+  const td=todayS(),cur=L('cph').find(p=>p.from<=td&&td<=p.to);if(cur)ph='Phase en cours : '+cur.n;
+  $('#cph').textContent=ph;
+}
+function tick(){
+  if(ready&&S.mode==='classic')return tickC();
+  const a=t0(),b=a+48*36e5,n=Date.now();let ph='';
+  if(!ready||isNaN(a)){$('#cdl').textContent=ready?'Choisissez une heure de départ':'Connexion…';return}
+  if(n<a){$('#cdl').textContent='Le départ est dans';$('#cd').textContent=hms(a-n);$('#bar').style.width='0'}
+  else if(n<b){$('#cdl').textContent='Temps restant avant le rendu';$('#cd').textContent=hms(b-n);$('#bar').style.width=((n-a)/(b-a)*100)+'%'}
+  else{$('#cdl').textContent='Rendu terminé';$('#cd').textContent='00:00:00';$('#bar').style.width='100%'}
+  const T=times(),els=document.querySelectorAll('.phase');
+  T.forEach(([s,e],i)=>{const cur=n>=s&&n<e;if(cur)ph='En cours : '+(S.phases[i].n)+' (jusqu’à '+fmt(e)+')';if(els[i]){els[i].classList.toggle('past',n>=e);els[i].classList.toggle('now',cur);const sm=els[i].querySelector('[data-pt]');if(sm)sm.textContent=isNaN(s)?'':fmt(s)+' → '+fmt(e)}});
+  $('#cph').textContent=ph;
+  const tot=(S.phases||[]).reduce((x,p)=>x+(+p.h||0),0),te=$('#tot');
+  if(te){te.className=tot===48?'muted':'warn';te.textContent='Total : '+tot+' h'+(tot===48?'.':' (il doit faire 48 h).')}
+}
+
+const addRow=(k,ph1,ph2,ph3,t2,t3)=>`<div class="add"><input id="a1" placeholder="${ph1}">${ph2?`<input id="a2" ${t2||''} placeholder="${ph2}" list="who">`:''}${ph3?`<input id="a3" ${t3||''} placeholder="${ph3}">`:''}<button class="btn" data-add="${k}">Ajouter</button></div>`;
+const delBtn=(k,id)=>`<button class="btn ghost" data-del="${k}" data-id="${id}" aria-label="Supprimer">×</button>`;
+const edit=(k,id,f,v,ph)=>`<input class="who" data-edit="${k}" data-id="${id}" data-f="${f}" value="${esc(v)}" placeholder="${ph}" list="who">`;
+
+function view(){
+  pending=false;
+  if(!tabs().some(x=>x[0]===tab))tab='chrono';
+  $('#tabs').innerHTML=tabs().map(([k,l])=>`<button role="tab" aria-selected="${k===tab}" data-tab="${k}">${l}</button>`).join('');
+  const m=$('#main');
+  if(SYNC&&!room){
+    $('#tabs').innerHTML='';
+    m.innerHTML=`<section class="card"><h2>Rejoindre une équipe</h2><p class="muted">Le code d’équipe donne accès aux données partagées. Gardez-le entre vous : toute personne qui l’a peut modifier le planning.</p><div class="add"><input id="rc" placeholder="Code d’équipe"><button class="btn" data-act="join">Rejoindre</button></div><h3>Ou créer une nouvelle équipe</h3><div class="add"><select id="rm" aria-label="Type de projet"><option value="48h">Concours 48 h</option><option value="classic">Tournage classique</option></select><button class="btn ghost" data-act="new">Créer</button></div></section>`;tick();return}
+  if(!ready){m.innerHTML='<p class="muted">Connexion à l’équipe…</p>';return}
+  const names=L('team').map(p=>`<option value="${esc(p.n)}">`).join('');
+  const dl=`<datalist id="who">${names}</datalist>`;
+  if(tab==='chrono'&&S.mode==='classic'){
+    const td=todayS(),c=S.c||{};
+    m.innerHTML=modeSel()+`<section class="card"><h2>Projet</h2><div class="grid">${[['titre','Titre'],['genre','Genre'],['logline','Pitch en une phrase']].map(([k,l])=>`<div><label for="c-${k}">${l}</label><input id="c-${k}" data-c="${k}" value="${esc(c[k])}"></div>`).join('')}</div></section>
+    <section class="card"><h2>Phases du projet</h2>${L('cph').sort((a,b)=>(a.from||'').localeCompare(b.from||'')).map((p,i)=>`<div class="row ${i?'':'first'}" style="${p.from<=td&&td<=p.to?'background:color-mix(in srgb,var(--tape) 28%,transparent)':''}"><input class="grow" data-edit="cph" data-id="${p.id}" data-f="n" value="${esc(p.n)}" aria-label="Nom de la phase"><input class="dt" type="date" data-edit="cph" data-id="${p.id}" data-f="from" value="${esc(p.from)}" aria-label="Début"><input class="dt" type="date" data-edit="cph" data-id="${p.id}" data-f="to" value="${esc(p.to)}" aria-label="Fin">${p.s?'':delBtn('cph',p.id)}</div>`).join('')}
+    <div class="add"><input id="a1" placeholder="Nouvelle phase"><input id="a2" type="date" aria-label="Début"><input id="a3" type="date" aria-label="Fin"><button class="btn" data-add="cph">Ajouter</button></div><p class="muted">La phase Tournage détermine le décompte et les jours de la feuille de service.</p></section>`;
+  }
+  else if(tab==='chrono'){
+    const T=times();
+    m.innerHTML=modeSel()+`<section class="card"><h2>Départ du concours</h2><label for="st">Heure de lancement (remise des contraintes)</label><input type="datetime-local" id="st" value="${esc(S.start)}"></section>
+    <section class="card"><h2>Contraintes imposées</h2><div class="grid">${[['genre','Genre'],['perso','Personnage'],['objet','Accessoire'],['replique','Réplique']].map(([k,l])=>`<div><label for="c-${k}">${l}</label><input id="c-${k}" data-c="${k}" value="${esc((S.c||{})[k])}"></div>`).join('')}</div></section>
+    <section class="card"><h2>Répartition des 48 heures</h2>${(S.phases||[]).map((p,i)=>`<div class="phase"><strong>${esc(p.n)}</strong><input type="number" min="0" step="0.5" value="${p.h}" data-ph="${i}" aria-label="Durée en heures : ${esc(p.n)}"><small data-pt></small><small>heures</small></div>`).join('')}<p id="tot"></p></section>`;
+  }
+  if(tab==='equipe')m.innerHTML=dl+`<section class="card"><h2>Équipe (${L('team').length})</h2>${L('team').map((p,i)=>`<div class="row ${i?'':'first'}"><div class="grow"><strong>${esc(p.n)}</strong><br><span class="muted">${esc(p.r)}${p.tel?' · '+esc(p.tel):''}</span></div>${delBtn('team',p.id)}</div>`).join('')||'<p class="muted">Ajoutez chaque membre avec son rôle et un numéro joignable. Ces infos sont visibles par toute l’équipe.</p>'}${addRow('team','Nom','Rôle (réal, son, montage…)','Téléphone').replace(' list="who"','')}</section>`;
+  if(tab==='taches'){const t=L('tasks');m.innerHTML=dl+`<section class="card"><h2>Tâches (${t.filter(x=>x.s===2).length}/${t.length} faites)</h2>${t.map((x,i)=>`<div class="row ${i?'':'first'}"><div class="grow ${x.s===2?'done':''}">${esc(x.t)}<br><span class="muted">${esc(x.who||'Non assignée')}</span></div><button class="st s${x.s}" data-st="tasks" data-id="${x.id}">${ST[x.s]}</button>${delBtn('tasks',x.id)}</div>`).join('')||'<p class="muted">Aucune tâche.</p>'}${addRow('tasks','Nouvelle tâche','Responsable')}</section>`}
+  if(tab==='scenes'){const s=L('scenes').sort((a,b)=>(a.day||'9').localeCompare(b.day||'9')||(a.o-b.o)),mn=s.reduce((x,y)=>x+(+y.d||0),0);m.innerHTML=`<section class="card"><h2>Plan de tournage</h2>${s.map((x,i)=>`<div class="row ${i?'':'first'}"><div class="grow ${x.s===2?'done':''}"><strong>${esc(x.n)}</strong><br><span class="muted">${x.day?fmtD(x.day)+' · ':''}${esc(x.l)} · ${x.d||0} min</span></div><button class="st s${x.s}" data-st="scenes" data-id="${x.id}">${SS[x.s]}</button>${delBtn('scenes',x.id)}</div>`).join('')||'<p class="muted">Listez vos scènes avec lieu et durée de tournage estimée.</p>'}<p class="muted">Durée estimée : ${Math.floor(mn/60)} h ${mn%60} min. ${S.mode==='classic'?'':'Tournage prévu : '+(S.phases&&S.phases[2]?S.phases[2].h:0)+' h.'}</p>${addRow('scenes','Scène (ex. 3 – Le bureau)','Lieu','Minutes','','type="number" min="0"').replace(' list="who"','').replace('<button class="btn" data-add',S.mode==='classic'?'<input id="a4" type="date" aria-label="Jour de tournage"><button class="btn" data-add':'<button class="btn" data-add')}</section>`}
+  if(tab==='matos'){const g=L('gear');m.innerHTML=dl+`<section class="card"><h2>Matériel (${g.filter(x=>x.k).length}/${g.length} prêt)</h2>${g.map((x,i)=>`<div class="row ${i?'':'first'}"><input type="checkbox" data-chk="gear" data-id="${x.id}" ${x.k?'checked':''} aria-label="${esc(x.t)} prêt"><div class="grow ${x.k?'done':''}">${esc(x.t)}</div>${edit('gear',x.id,'who',x.who,'Qui l’apporte ?')}${delBtn('gear',x.id)}</div>`).join('')}${addRow('gear','Nouvel élément','Qui l’apporte ?')}</section>`}
+  if(tab==='budget'){const B=L('budget'),nm='type="number" min="0" step="any"';
+    m.innerHTML=`<section class="card"><h2>Budget</h2><label for="bud">Enveloppe globale (€)</label><input id="bud" type="number" min="0" step="any" data-b value="${+S.bud||''}"><p id="bsum"></p>
+    <div class="row first muted"><div class="grow">Poste</div><div class="num">Estimé (€)</div><div class="num">Dépensé (€)</div><div style="width:38px"></div></div>${B.map(x=>`<div class="row"><input class="grow" data-edit="budget" data-id="${x.id}" data-f="t" value="${esc(x.t)}" aria-label="Poste"><input class="num" ${nm} data-edit="budget" data-id="${x.id}" data-f="est" data-num value="${x.est||''}" aria-label="Estimé"><input class="num" ${nm} data-edit="budget" data-id="${x.id}" data-f="real" data-num value="${x.real||''}" aria-label="Dépensé">${delBtn('budget',x.id)}</div>`).join('')}${addRow('budget','Poste de dépense','Estimé (€)','Dépensé (€)',nm,nm).replace(' list="who"','')}<p class="muted">Pensez aux repas, transports, assurance et droits musicaux.</p></section>`}
+  if(tab==='sommeil'){const z=L('sleep').sort((a,b)=>new Date(a.at)-new Date(b.at)),tot={};z.forEach(x=>tot[x.who]=(tot[x.who]||0)+(+x.h||0));
+    m.innerHTML=dl+`<section class="card"><h2>Plages de repos</h2>${z.map((x,i)=>{const s=new Date(x.at).getTime();return`<div class="row ${i?'':'first'}"><div class="grow"><strong>${esc(x.who)}</strong><br><span class="muted">${fmt(s)} → ${fmt(s+x.h*36e5)} (${x.h} h)</span></div>${delBtn('sleep',x.id)}</div>`}).join('')||'<p class="muted">Planifiez le sommeil de chacun, surtout du monteur : une équipe épuisée fait des erreurs.</p>'}
+    ${Object.keys(tot).length?`<p class="muted">Total prévu : ${Object.entries(tot).map(([k,v])=>esc(k)+' '+v+' h').join(', ')}</p>`:''}${addRow('sleep','Personne','Début','Heures','type="datetime-local" aria-label="Début"','type="number" min="0" step="0.5"')}</section>`}
+  if(tab==='feuille'&&S.mode==='classic'){
+    const sp=L('cph').find(p=>p.s)||{},days=[];
+    if(sp.from&&sp.to){for(let d=new Date(sp.from+'T12:00:00'),i=0;i<60;i++){const q=ymd(d);if(q>sp.to)break;days.push(q);d.setDate(d.getDate()+1)}}
+    if(!days.includes(curDay))curDay=days.includes(todayS())?todayS():(days[0]||'');
+    const sc=L('scenes').filter(x=>x.day===curDay),c=S.c||{};
+    m.innerHTML=`<section class="card sheet"><div class="noprint"><label for="fd">Jour de tournage</label><select id="fd">${days.map(d=>`<option value="${d}"${d===curDay?' selected':''}>${fmtD(d)}</option>`).join('')}</select><br><br><button class="btn" data-act="print">Imprimer la feuille</button></div><h2>Feuille de service${curDay?' : '+fmtD(curDay):''}</h2>
+    <p>${esc(c.titre)||'Projet sans titre'}${c.genre?' · '+esc(c.genre):''}</p>
+    <h3>Scènes du jour</h3><table>${sc.map(x=>`<tr><td>${esc(x.n)}</td><td>${esc(x.l)}</td><td>${x.d||0} min</td><td>${SS[x.s]}</td></tr>`).join('')||'<tr><td>Aucune scène planifiée ce jour.</td></tr>'}</table>
+    <h3>Équipe</h3><table>${L('team').map(p=>`<tr><td>${esc(p.n)}</td><td>${esc(p.r)}</td><td>${esc(p.tel)}</td>${cv(p,curDay||'x')}</tr>`).join('')||'<tr><td>—</td></tr>'}</table>
+    <h3>Matériel restant à rassembler</h3><p>${L('gear').filter(x=>!x.k).map(x=>esc(x.t)+(x.who?' ('+esc(x.who)+')':'')).join(', ')||'Tout est prêt.'}</p>
+    <h3>Tâches en attente</h3><p>${L('tasks').filter(x=>x.s!==2).map(x=>esc(x.t)+(x.who?' ('+esc(x.who)+')':'')).join(', ')||'Rien en attente.'}</p></section>`}
+  else if(tab==='feuille'){
+    const T=times(),a=t0(),c=S.c||{};
+    m.innerHTML=`<section class="card sheet"><div class="noprint"><button class="btn" data-act="print">Imprimer la feuille</button></div><h2>Feuille de service</h2>
+    <p>Départ : <strong>${isNaN(a)?'—':fmt(a)}</strong> · Rendu : <strong>${isNaN(a)?'—':fmt(a+48*36e5)}</strong></p>
+    <h3>Contraintes</h3><p>Genre : ${esc(c.genre)||'—'}<br>Personnage : ${esc(c.perso)||'—'}<br>Accessoire : ${esc(c.objet)||'—'}<br>Réplique : ${esc(c.replique)||'—'}</p>
+    <h3>Planning</h3><table>${(S.phases||[]).map((p,i)=>`<tr><td>${esc(p.n)}</td><td>${isNaN(T[i][0])?'':fmt(T[i][0])+' → '+fmt(T[i][1])}</td></tr>`).join('')}</table>
+    <h3>Équipe</h3><table>${L('team').map(p=>`<tr><td>${esc(p.n)}</td><td>${esc(p.r)}</td><td>${esc(p.tel)}</td>${cv(p,'x')}</tr>`).join('')||'<tr><td>—</td></tr>'}</table>
+    <h3>Scènes</h3><table>${L('scenes').map(x=>`<tr><td>${esc(x.n)}</td><td>${esc(x.l)}</td><td>${x.d||0} min</td><td>${SS[x.s]}</td></tr>`).join('')||'<tr><td>—</td></tr>'}</table>
+    <h3>Repos</h3><table>${L('sleep').sort((x,y)=>new Date(x.at)-new Date(y.at)).map(x=>`<tr><td>${esc(x.who)}</td><td>${fmt(new Date(x.at).getTime())}</td><td>${x.h} h</td></tr>`).join('')||'<tr><td>—</td></tr>'}</table>
+    <h3>Matériel restant à rassembler</h3><p>${L('gear').filter(x=>!x.k).map(x=>esc(x.t)+(x.who?' ('+esc(x.who)+')':'')).join(', ')||'Tout est prêt.'}</p></section>`}
+  tick();updBud();
+}
+
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-tab],[data-add],[data-del],[data-st],[data-act]');if(!t)return;
+  const v=id=>(($('#'+id)||{}).value||'').trim(),d=t.dataset;
+  if(d.tab){tab=d.tab}
+  else if(d.act==='print'){window.print();return}
+  else if(d.act==='copy'){try{navigator.clipboard.writeText(location.href);t.textContent='Lien copié'}catch(x){}setTimeout(()=>t.textContent='Copier le lien',1500);return}
+  else if(d.act==='leave'){try{localStorage.removeItem(RK)}catch(x){}history.replaceState(null,'',location.pathname);location.reload();return}
+  else if(d.act==='join'||d.act==='new'){
+    let c=d.act==='join'?v('rc').replace(/[^\w-]/g,''):Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>'abcdefghjkmnpqrstuvwxyz23456789'[b%31]).join('');
+    if(c.length<4){alert('Le code doit faire au moins 4 caractères.');return}
+    newMode=d.act==='new'?(($('#rm')||{}).value||'48h'):'48h';room=c;history.replaceState(null,'','#'+room);try{localStorage.setItem(RK,room)}catch(x){}connect();
+  }
+  else if(d.add){const k=d.add,a1=v('a1'),a2=v('a2'),a3=v('a3');if(!a1)return;const id=uid(),o=Date.now();
+    if(k==='team')put('team/'+id,{n:a1,r:a2,tel:a3,o});
+    if(k==='tasks')put('tasks/'+id,{t:a1,who:a2,s:0,o});
+    if(k==='scenes')put('scenes/'+id,{n:a1,l:a2,d:+a3||0,s:0,day:v('a4'),o});
+    if(k==='cph'){if(!a2||!a3){alert('Indiquez les dates de début et de fin.');return}put('cph/'+id,{n:a1,from:a2,to:a3,s:0,o})}
+    if(k==='budget')put('budget/'+id,{t:a1,est:+a2||0,real:+a3||0,o});
+    if(k==='gear')put('gear/'+id,{t:a1,who:a2,k:0,o});
+    if(k==='sleep'){if(!a2||!(+a3>0)){alert('Indiquez un début et une durée en heures.');return}put('sleep/'+id,{who:a1,at:a2,h:+a3,o})}}
+  else if(d.del){put(d.del+'/'+d.id,null)}
+  else if(d.st){const o=(S[d.st]||{})[d.id];if(o)put(d.st+'/'+d.id+'/s',((o.s||0)+1)%3)}
+  view();
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.c)put('c/'+t.dataset.c,t.value);
+  else if(t.dataset.ph!==undefined){put('phases/'+t.dataset.ph+'/h',+t.value||0);tick()}
+  else if(t.dataset.b!==undefined){put('bud',+t.value||0);updBud()}
+  else if(t.dataset.num!==undefined){put(t.dataset.edit+'/'+t.dataset.id+'/'+t.dataset.f,+t.value||0);updBud()}
+});
+document.addEventListener('change',e=>{
+  const t=e.target,d=t.dataset;
+  if(t.id==='md'){put('mode',t.value);if(t.value==='classic'&&!S.cph)put('cph',DEF('classic').cph);view()}
+  else if(t.id==='fd'){curDay=t.value;view()}
+  else if(t.id==='st'){put('start',t.value);tick()}
+  else if(d.chk){put(d.chk+'/'+d.id+'/k',t.checked?1:0);view()}
+  else if(d.edit&&d.num===undefined)put(d.edit+'/'+d.id+'/'+d.f,t.value.trim());
+});
+document.addEventListener('focusout',()=>setTimeout(()=>{if(pending&&!typing())view()},400));
+$('#theme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark'};
+window.addEventListener('hashchange',()=>location.reload());
+
+function connect(){
+  $('#leave').hidden=false;
+  if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
+  const db=firebase.database();R=db.ref('rooms/'+room);
+  db.ref('.info/connected').on('value',s=>{$('#sync').textContent=s.val()?'● Synchronisé · équipe '+room:'○ Connexion…'});
+  ready=false;view();
+  R.on('value',s=>{const v=s.val();if(!v){R.update(DEF(newMode));return}
+    S=v;ready=true;if(typing()){pending=true;tick()}else view()},
+    ()=>{$('#sync').textContent='Accès refusé : vérifiez les règles Firebase'});
+}
+
+if(SYNC){
+  try{room=(location.hash||'').slice(1).replace(/[^\w-]/g,'')||localStorage.getItem(RK)||''}catch(e){}
+  if(room){history.replaceState(null,'','#'+room);connect()}else view();
+}else{
+  try{S=JSON.parse(localStorage.getItem(LK))}catch(e){}
+  if(!S||!S.init)S=DEF();
+  ready=true;
+  $('#ban').innerHTML='<div class="banner">Mode local : les données restent sur cet appareil. Ajoutez la configuration Firebase pour synchroniser l’équipe.</div>';
+  view();
+}
+setInterval(tick,1000);
+</script>
+</body>
+</html>
