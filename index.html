@@ -292,6 +292,13 @@ document.addEventListener('click',e=>{
   }
   else if(d.act==='leave'){try{localStorage.removeItem(RK)}catch(x){}history.replaceState(null,'',location.pathname);location.reload();return}
   else if(d.act==='del_room'){
+    // --- SÉCURITÉ ADMINISTRATEUR POUR LA SUPPRESSION ---
+    const code = prompt("🔒 Code administrateur requis pour supprimer cette équipe :");
+    if (code === null) return; // Annulé
+    if (code !== ADMIN_CODE) {
+      alert("Code incorrect. Suppression refusée.");
+      return;
+    }
     if(confirm("⚠️ ATTENTION : Voulez-vous vraiment supprimer définitivement ce projet pour TOUTE l'équipe ? Cette action est irréversible.")){
       if(R) R.remove().then(()=>{
         try{localStorage.removeItem(RK)}catch(x){}
@@ -359,7 +366,7 @@ document.addEventListener('focusout',()=>setTimeout(()=>{if(pending&&!typing())v
 $('#theme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark'};
 window.addEventListener('hashchange',()=>location.reload());
 
-// --- CORRECTION DE LA RESTAURATION MOBILE ---
+// --- RESTAURATION JSON CORRIGÉE MOBILE ---
 $('#fileIn').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -367,20 +374,18 @@ $('#fileIn').addEventListener('change', function(e) {
   reader.onload = function(event) {
     try {
       const parsed = JSON.parse(event.target.result);
-      
-      // On utilise un setTimeout pour laisser le temps au navigateur mobile de fermer le sélecteur de fichier
       setTimeout(() => {
         if (confirm("⚠️ ATTENTION : Cela va écraser toutes les données actuelles de l'équipe avec ce fichier. Continuer ?")) {
           if (SYNC && R) {
-            // On affiche un message d'attente
             const btn = document.querySelector('[data-act="import"]');
             if(btn) btn.textContent = "Patientez...";
-            
             R.set(parsed).then(() => {
               alert("Restauration réussie ! Le projet a été mis à jour.");
-              view(); // On rafraîchit l'écran
+              if(btn) btn.textContent = "Restaurer";
+              view(); 
             }).catch(err => {
               alert("Erreur Firebase : " + err.message);
+              if(btn) btn.textContent = "Restaurer";
             });
           } else {
             S = parsed;
@@ -389,11 +394,10 @@ $('#fileIn').addEventListener('change', function(e) {
           }
         }
       }, 100);
-      
     } catch (err) {
-      alert("Erreur : le fichier sélectionné n'est pas un JSON valide ou est corrompu.");
+      alert("Erreur : le fichier sélectionné n'est pas un JSON valide.");
     }
-    e.target.value = ''; // On réinitialise le champ correctement
+    e.target.value = ''; 
   };
   reader.onerror = function() {
     alert("Erreur lors de la lecture du fichier par le téléphone.");
