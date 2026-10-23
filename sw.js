@@ -1,7 +1,7 @@
 'use strict';
 
 // Versionner ce cache à chaque modification importante du service worker.
-const CACHE_NAME = 'regie-tournage-v2';
+const CACHE_NAME = 'regie-tournage-v3';
 const APP_SHELL = ['./'];
 const API_HOSTS = /(^|\.)(?:firebaseio\.com|firebasedatabase\.app|open-meteo\.com)$/i;
 
